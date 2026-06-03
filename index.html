@@ -9,6 +9,7 @@
     --olive: #6c8b2d;
     --green: #7aa91a;
     --dark-olive: #606d3d;
+    --amber: #ffb82f;
     --teal: #57a795;
     --dark: #525050;
     --bg: #f7f8f4;
@@ -27,51 +28,47 @@
     min-height: 100vh;
     padding: 2rem 1rem 4rem;
   }
-  .container { max-width: 720px; margin: 0 auto; }
+  .container { max-width: 760px; margin: 0 auto; }
+ 
   .header { text-align: center; margin-bottom: 2rem; }
-  h1 { font-size: 1.5rem; font-weight: 700; color: var(--dark); margin-bottom: 0.4rem; line-height: 1.3; }
-  .subtitle { font-size: 0.875rem; color: var(--muted); }
+  .brand {
+    font-size: 2rem; font-weight: 800; letter-spacing: -0.02em;
+    color: var(--olive); margin-bottom: 0.3rem;
+  }
+  h1 { font-size: 1rem; font-weight: 400; color: var(--muted); margin-bottom: 0.6rem; }
   .norm-tag {
-    display: inline-flex; align-items: center; gap: 5px;
+    display: inline-flex; align-items: center;
     font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
     color: var(--dark-olive); background: #eaf0db; border: 1px solid #cdd8b0;
-    border-radius: 20px; padding: 3px 10px; margin-top: 0.75rem;
+    border-radius: 20px; padding: 3px 10px;
   }
+ 
   .card {
     background: var(--white); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.25rem;
+    border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem;
   }
   .card-title {
-    font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--muted); margin-bottom: 1rem;
+    font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem;
   }
-  .url-row { display: flex; gap: 8px; margin-bottom: 8px; }
-  .url-row input {
-    flex: 1; border: 1px solid var(--border); border-radius: var(--radius-sm);
-    padding: 9px 12px; font-size: 13.5px; color: var(--text);
-    background: var(--bg); outline: none; transition: border-color 0.15s;
+ 
+  textarea {
+    width: 100%; height: 160px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; font-size: 13px; color: var(--text);
+    background: var(--bg); outline: none; resize: vertical;
+    transition: border-color 0.15s; font-family: monospace; line-height: 1.6;
   }
-  .url-row input:focus { border-color: var(--olive); background: var(--white); }
-  .url-row input::placeholder { color: var(--muted); }
-  .btn-icon {
-    width: 38px; height: 38px; border: 1px solid var(--border);
-    border-radius: var(--radius-sm); background: var(--white); color: var(--muted);
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; transition: all 0.15s; font-size: 16px;
-  }
-  .btn-icon:hover { border-color: #e05050; color: #e05050; background: #fff5f5; }
-  .btn-add {
-    display: inline-flex; align-items: center; gap: 6px; font-size: 13px;
-    color: var(--olive); background: none; border: 1px dashed var(--olive);
-    border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer;
-    margin-top: 4px; transition: all 0.15s;
-  }
-  .btn-add:hover { background: #f3f7e8; }
+  textarea:focus { border-color: var(--olive); background: var(--white); }
+  textarea::placeholder { color: var(--muted); font-family: 'Segoe UI', sans-serif; }
+ 
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+ 
   .btn-generate {
-    width: 100%; padding: 12px; background: var(--olive); color: var(--white);
+    width: 100%; padding: 13px; background: var(--olive); color: var(--white);
     border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    gap: 8px; margin-top: 1.25rem; transition: background 0.15s;
+    gap: 8px; margin-top: 1rem; transition: background 0.15s;
   }
   .btn-generate:hover { background: var(--dark-olive); }
   .btn-generate:disabled { background: #aab890; cursor: not-allowed; }
@@ -81,110 +78,114 @@
     animation: spin 0.7s linear infinite; display: none;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .results { margin-top: 1.5rem; }
-  .copy-all-bar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+ 
+  /* Progress */
+  .progress-bar-wrap {
+    background: var(--border); border-radius: 4px; height: 6px;
+    margin-top: 1rem; display: none; overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%; background: var(--green); border-radius: 4px;
+    transition: width 0.3s ease; width: 0%;
+  }
+  .progress-label {
+    font-size: 12px; color: var(--muted); margin-top: 6px;
+    text-align: center; display: none;
+  }
+ 
+  /* Results */
+  .results-card {
+    background: var(--white); border: 1px solid #c8dda8;
+    border-radius: var(--radius); padding: 1.5rem; display: none;
+  }
+  .results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  .results-title {
+    font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--dark-olive);
+  }
   .btn-copy-all {
-    display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
-    color: var(--dark-olive); background: white; border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: 6px 14px; cursor: pointer; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600;
+    color: var(--white); background: var(--dark-olive);
+    border: none; border-radius: var(--radius-sm);
+    padding: 7px 16px; cursor: pointer; transition: background 0.15s;
   }
-  .btn-copy-all:hover { border-color: var(--olive); color: var(--olive); }
-  .ref-item {
-    background: var(--white); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1rem 1.25rem;
-    margin-bottom: 10px; animation: fadeIn 0.3s ease;
-  }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  .ref-item.loading { border-color: #c5d8f0; background: #f0f6ff; }
-  .ref-item.error { border-color: #f0c5c5; background: #fff5f5; }
-  .ref-item.success { border-color: #c8dda8; }
-  .ref-status {
-    display: flex; align-items: center; gap: 7px; margin-bottom: 6px;
-    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
-  }
-  .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .loading .status-dot { background: #4a90d9; animation: pulse 1s infinite; }
-  .error .status-dot { background: #e05050; }
-  .success .status-dot { background: var(--green); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .loading .ref-status { color: #4a90d9; }
-  .error .ref-status { color: #c03030; }
-  .success .ref-status { color: var(--dark-olive); }
-  .ref-url-label {
-    font-size: 11px; color: var(--muted); word-break: break-all;
-    margin-bottom: 8px; font-family: monospace;
-  }
-  .ref-text {
-    font-size: 13.5px; line-height: 1.7; color: var(--text);
+  .btn-copy-all:hover { background: var(--olive); }
+  .btn-copy-all.copied { background: var(--green); }
+ 
+  .refs-output {
+    width: 100%; min-height: 200px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px; font-size: 13.5px; line-height: 1.8;
     font-family: Georgia, 'Times New Roman', serif;
-    padding: 10px 12px; background: var(--bg);
-    border-radius: var(--radius-sm); border: 1px solid var(--border);
+    color: var(--text); background: var(--bg);
     white-space: pre-wrap; word-break: break-word;
   }
-  .ref-text strong { font-weight: 700; }
-  .ref-footer { display: flex; justify-content: flex-end; margin-top: 8px; }
-  .btn-copy {
-    display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
-    color: var(--muted); background: none; border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: 4px 10px; cursor: pointer; transition: all 0.15s;
-  }
-  .btn-copy:hover { color: var(--olive); border-color: var(--olive); }
-  .btn-copy.copied { color: var(--green); border-color: var(--green); }
-  .brand {
-    font-size: 1.8rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--olive);
-    margin-bottom: 0.4rem;
-  }
-
+  .refs-output .ref-line { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+  .refs-output .ref-line:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .refs-output .ref-error { color: #c03030; font-family: sans-serif; font-size: 12px; font-style: italic; }
+  .refs-output .ref-url { font-size: 10.5px; color: var(--muted); font-family: monospace; margin-bottom: 4px; }
+ 
   .footer-note {
     text-align: center; font-size: 11.5px; color: var(--muted);
-    margin-top: 2rem; line-height: 1.6;
+    margin-top: 1.5rem; line-height: 1.6;
   }
 </style>
 </head>
 <body>
 <div class="container">
-
+ 
   <div class="header">
     <div class="brand">Transformice</div>
     <h1>Gerador de Referências Bibliográficas</h1>
-    <p class="subtitle">Cole as URLs das suas fontes e receba as referências formatadas automaticamente</p>
     <div class="norm-tag">✓ ABNT NBR 6023:2025 — Terceira edição</div>
   </div>
-
+ 
   <div class="card">
-    <div class="card-title">URLs das fontes</div>
-    <div id="url-list">
-      <div class="url-row">
-        <input type="url" placeholder="https://..." />
-        <button class="btn-icon" onclick="removeRow(this)" title="Remover">✕</button>
-      </div>
-    </div>
-    <button class="btn-add" onclick="addRow()">+ Adicionar outra URL</button>
+    <div class="card-title">Cole as URLs das suas fontes</div>
+    <textarea id="url-input" placeholder="Cole uma URL por linha, por exemplo:
+ 
+https://www.site.gov.br/pagina
+https://www.outro-site.com.br/artigo
+https://exemplo.org/documento"></textarea>
+    <p class="hint">Uma URL por linha. Pode colar quantas quiser.</p>
+ 
     <button class="btn-generate" id="gen-btn" onclick="generateRefs()">
       <span id="gen-label">Gerar referências</span>
       <div class="spinner" id="spinner"></div>
     </button>
+ 
+    <div class="progress-bar-wrap" id="progress-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="progress-label" id="progress-label"></div>
   </div>
-
-  <div class="results" id="results"></div>
-
+ 
+  <div class="results-card" id="results-card">
+    <div class="results-header">
+      <div class="results-title" id="results-title">Referências geradas</div>
+      <button class="btn-copy-all" id="btn-copy-all" onclick="copyAll(this)">⎘ Copiar tudo</button>
+    </div>
+    <div class="refs-output" id="refs-output"></div>
+  </div>
+ 
   <p class="footer-note">
     Transformice · Referências geradas com IA conforme ABNT NBR 6023:2025 · Verifique sempre os metadados
   </p>
-
+ 
 </div>
-
+ 
 <script>
-const GROQ_KEY = "SUA_CHAVE_AQUI";
+const GROQ_KEY = "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";
 const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
-
+ 
 const SYSTEM = `Você é especialista em normas brasileiras de documentação com domínio completo da ABNT NBR 6023:2025 (terceira edição, 21/05/2025).
-
+ 
 Gere referências para documentos online conforme seções 6.6, 7.20 e 8.13.
-
+ 
 REGRAS:
 1. Pessoa física: SOBRENOME, Nome. (último sobrenome maiúsculo)
 2. Pessoa jurídica: NOME DA ORGANIZAÇÃO EM MAIÚSCULAS conforme aparece no site
@@ -197,86 +198,78 @@ REGRAS:
 9. Local não identificável: [S. l.]
 10. Redes sociais: indicar nome da rede e perfil após a data
 11. Ponto final obrigatório
-
+ 
 FORMATO GERAL:
 AUTOR. **Título**: subtítulo. Local: Site, data. Disponível em: URL. Acesso em: [data atual].
-
+ 
 Responda APENAS com a referência. Use **negrito** só no título. Sem explicações, sem prefixos.`;
-
-function addRow() {
-  const list = document.getElementById('url-list');
-  const row = document.createElement('div');
-  row.className = 'url-row';
-  row.innerHTML = `<input type="url" placeholder="https://..." /><button class="btn-icon" onclick="removeRow(this)" title="Remover">✕</button>`;
-  list.appendChild(row);
-  row.querySelector('input').focus();
-}
-
-function removeRow(btn) {
-  const rows = document.querySelectorAll('.url-row');
-  if (rows.length === 1) { btn.closest('.url-row').querySelector('input').value = ''; return; }
-  btn.closest('.url-row').remove();
-}
-
+ 
 function setLoading(on) {
   document.getElementById('gen-btn').disabled = on;
   document.getElementById('gen-label').textContent = on ? 'Gerando...' : 'Gerar referências';
   document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('progress-wrap').style.display = on ? 'block' : 'none';
+  document.getElementById('progress-label').style.display = on ? 'block' : 'none';
 }
-
+ 
+function setProgress(done, total) {
+  const pct = Math.round((done / total) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `Processando ${done} de ${total}...`;
+}
+ 
 async function generateRefs() {
-  const urls = Array.from(document.querySelectorAll('.url-row input'))
-    .map(i => i.value.trim()).filter(Boolean);
-  if (!urls.length) { alert('Cole pelo menos uma URL.'); return; }
-
+  const raw = document.getElementById('url-input').value;
+  const urls = raw.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
+ 
+  if (!urls.length) { alert('Cole pelo menos uma URL válida.'); return; }
+ 
   setLoading(true);
-  const box = document.getElementById('results');
-  box.innerHTML = '';
+  setProgress(0, urls.length);
+ 
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+  output.innerHTML = '';
+ 
   const allRefs = [];
-
-  for (const url of urls) {
-    const item = document.createElement('div');
-    item.className = 'ref-item loading';
-    item.innerHTML = `<div class="ref-status"><div class="status-dot"></div>Processando...</div>
-      <div class="ref-url-label">${url}</div>`;
-    box.appendChild(item);
-
+ 
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    setProgress(i + 1, urls.length);
+ 
     try {
       const ref = await callGroq(url);
-      allRefs.push({ url, ref });
-      const id = `r${Date.now()}`;
-      item.className = 'ref-item success';
-      item.innerHTML = `
-        <div class="ref-status"><div class="status-dot"></div>Referência gerada</div>
-        <div class="ref-url-label">${url}</div>
-        <div class="ref-text" id="${id}">${renderRef(ref)}</div>
-        <div class="ref-footer">
-          <button class="btn-copy" onclick="copyOne('${id}', this)">⎘ Copiar</button>
-        </div>`;
+      allRefs.push(ref);
+      const div = document.createElement('div');
+      div.className = 'ref-line';
+      div.innerHTML = `<div class="ref-url">${url}</div><div>${renderRef(ref)}</div>`;
+      output.appendChild(div);
     } catch(e) {
-      item.className = 'ref-item error';
-      item.innerHTML = `<div class="ref-status"><div class="status-dot"></div>Erro ao processar</div>
-        <div class="ref-url-label">${url}</div>
-        <div style="font-size:13px;color:#c03030;margin-top:4px;">${e.message}</div>`;
+      allRefs.push(`[Erro: ${url}]`);
+      const div = document.createElement('div');
+      div.className = 'ref-line';
+      div.innerHTML = `<div class="ref-url">${url}</div><div class="ref-error">Erro ao processar: ${e.message}</div>`;
+      output.appendChild(div);
     }
   }
-
-  if (allRefs.length > 1) {
-    window._refs = allRefs;
-    const bar = document.createElement('div');
-    bar.className = 'copy-all-bar';
-    bar.innerHTML = `<button class="btn-copy-all" onclick="copyAll(this)">⎘ Copiar todas (${allRefs.length})</button>`;
-    box.insertBefore(bar, box.firstChild);
-  }
-
+ 
+  window._allRefs = allRefs;
+  document.getElementById('results-title').textContent = `${allRefs.length} referência${allRefs.length > 1 ? 's' : ''} gerada${allRefs.length > 1 ? 's' : ''}`;
   setLoading(false);
+  document.getElementById('progress-label').textContent = 'Concluído!';
+  setTimeout(() => {
+    document.getElementById('progress-wrap').style.display = 'none';
+    document.getElementById('progress-label').style.display = 'none';
+  }, 2000);
+  resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-
+ 
 async function callGroq(url) {
   const today = new Date();
   const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
   const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
-
+ 
   const resp = await fetch(GROQ_API, {
     method: 'POST',
     headers: {
@@ -293,38 +286,31 @@ async function callGroq(url) {
       ]
     })
   });
-
+ 
   if (!resp.ok) {
     const e = await resp.json().catch(() => ({}));
     throw new Error(e.error?.message || `Erro HTTP ${resp.status}`);
   }
-
+ 
   const data = await resp.json();
   const text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Sem resposta da API.');
   return text;
 }
-
+ 
 function renderRef(text) {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
-
-function copyOne(id, btn) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  navigator.clipboard.writeText(el.innerText).then(() => {
-    btn.textContent = '✓ Copiado';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = '⎘ Copiar'; btn.classList.remove('copied'); }, 2000);
-  });
-}
-
+ 
 function copyAll(btn) {
-  if (!window._refs) return;
-  const text = window._refs.map(r => r.ref.replace(/\*\*(.+?)\*\*/g, '$1')).join('\n\n');
+  if (!window._allRefs) return;
+  const text = window._allRefs
+    .map(r => r.replace(/\*\*(.+?)\*\*/g, '$1'))
+    .join('\n\n');
   navigator.clipboard.writeText(text).then(() => {
-    btn.textContent = '✓ Copiadas!';
-    setTimeout(() => { btn.textContent = `⎘ Copiar todas (${window._refs.length})`; }, 2000);
+    btn.textContent = '✓ Copiado!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '⎘ Copiar tudo'; btn.classList.remove('copied'); }, 2500);
   });
 }
 </script>
