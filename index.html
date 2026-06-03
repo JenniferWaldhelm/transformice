@@ -12,6 +12,7 @@
   gtag("js", new Date());
   gtag("config", "G-HWM13D0G17");
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
 <style>
   :root {
     --olive: #6c8b2d;
@@ -31,18 +32,12 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 2rem 1rem 4rem;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 2rem 1rem 4rem;
   }
   .container { max-width: 760px; margin: 0 auto; }
- 
   .header { text-align: center; margin-bottom: 2rem; }
-  .brand {
-    font-size: 2rem; font-weight: 800; letter-spacing: -0.02em;
-    color: var(--olive); margin-bottom: 0.3rem;
-  }
+  .brand { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; color: var(--olive); margin-bottom: 0.3rem; }
   h1 { font-size: 1rem; font-weight: 400; color: var(--muted); margin-bottom: 0.6rem; }
   .norm-tag {
     display: inline-flex; align-items: center;
@@ -50,7 +45,6 @@
     color: var(--dark-olive); background: #eaf0db; border: 1px solid #cdd8b0;
     border-radius: 20px; padding: 3px 10px;
   }
- 
   .card {
     background: var(--white); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem;
@@ -59,19 +53,15 @@
     font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
     letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem;
   }
- 
   textarea {
-    width: 100%; height: 160px;
-    border: 1px solid var(--border); border-radius: var(--radius-sm);
-    padding: 10px 12px; font-size: 13px; color: var(--text);
-    background: var(--bg); outline: none; resize: vertical;
+    width: 100%; height: 160px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px;
+    color: var(--text); background: var(--bg); outline: none; resize: vertical;
     transition: border-color 0.15s; font-family: monospace; line-height: 1.6;
   }
   textarea:focus { border-color: var(--olive); background: var(--white); }
   textarea::placeholder { color: var(--muted); font-family: 'Segoe UI', sans-serif; }
- 
   .hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
- 
   .btn-generate {
     width: 100%; padding: 13px; background: var(--olive); color: var(--white);
     border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600;
@@ -86,61 +76,41 @@
     animation: spin 0.7s linear infinite; display: none;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
- 
-  /* Progress */
   .progress-bar-wrap {
     background: var(--border); border-radius: 4px; height: 6px;
     margin-top: 1rem; display: none; overflow: hidden;
   }
-  .progress-bar {
-    height: 100%; background: var(--green); border-radius: 4px;
-    transition: width 0.3s ease; width: 0%;
-  }
-  .progress-label {
-    font-size: 12px; color: var(--muted); margin-top: 6px;
-    text-align: center; display: none;
-  }
- 
-  /* Results */
+  .progress-bar { height: 100%; background: var(--green); border-radius: 4px; transition: width 0.3s ease; width: 0%; }
+  .progress-label { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: center; display: none; }
   .results-card {
     background: var(--white); border: 1px solid #c8dda8;
     border-radius: var(--radius); padding: 1.5rem; display: none;
   }
-  .results-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 1rem;
-  }
-  .results-title {
-    font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--dark-olive);
-  }
-  .btn-copy-all {
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+  .results-title { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dark-olive); }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-action {
     display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 600;
-    color: var(--white); background: var(--dark-olive);
-    border: none; border-radius: var(--radius-sm);
-    padding: 7px 16px; cursor: pointer; transition: background 0.15s;
+    font-size: 13px; font-weight: 600; border: none;
+    border-radius: var(--radius-sm); padding: 7px 16px; cursor: pointer; transition: all 0.15s;
   }
-  .btn-copy-all:hover { background: var(--olive); }
-  .btn-copy-all.copied { background: var(--green); }
- 
+  .btn-copy { background: var(--dark-olive); color: white; }
+  .btn-copy:hover { background: var(--olive); }
+  .btn-copy.copied { background: var(--green); }
+  .btn-word { background: #1f5c9e; color: white; }
+  .btn-word:hover { background: #174a80; }
+  .btn-word:disabled { background: #aaa; cursor: not-allowed; }
   .refs-output {
-    width: 100%; min-height: 200px;
-    border: 1px solid var(--border); border-radius: var(--radius-sm);
-    padding: 12px; font-size: 13.5px; line-height: 1.8;
-    font-family: Georgia, 'Times New Roman', serif;
-    color: var(--text); background: var(--bg);
-    white-space: pre-wrap; word-break: break-word;
+    width: 100%; min-height: 200px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px; font-size: 13.5px; line-height: 1.8;
+    font-family: Georgia, 'Times New Roman', serif; color: var(--text);
+    background: var(--bg); white-space: pre-wrap; word-break: break-word;
   }
-  .refs-output .ref-line { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
-  .refs-output .ref-line:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-  .refs-output .ref-error { color: #c03030; font-family: sans-serif; font-size: 12px; font-style: italic; }
-  .refs-output .ref-url { font-size: 10.5px; color: var(--muted); font-family: monospace; margin-bottom: 4px; }
- 
-  .footer-note {
-    text-align: center; font-size: 11.5px; color: var(--muted);
-    margin-top: 1.5rem; line-height: 1.6;
-  }
+  .ref-line { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+  .ref-line:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .ref-error { color: #c03030; font-family: sans-serif; font-size: 12px; font-style: italic; }
+  .ref-url-small { font-size: 10.5px; color: var(--muted); font-family: monospace; margin-bottom: 4px; }
+  .footer-note { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 1.5rem; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -160,12 +130,10 @@ https://www.site.gov.br/pagina
 https://www.outro-site.com.br/artigo
 https://exemplo.org/documento"></textarea>
     <p class="hint">Uma URL por linha. Pode colar quantas quiser.</p>
- 
     <button class="btn-generate" id="gen-btn" onclick="generateRefs()">
       <span id="gen-label">Gerar referências</span>
       <div class="spinner" id="spinner"></div>
     </button>
- 
     <div class="progress-bar-wrap" id="progress-wrap">
       <div class="progress-bar" id="progress-bar"></div>
     </div>
@@ -175,7 +143,10 @@ https://exemplo.org/documento"></textarea>
   <div class="results-card" id="results-card">
     <div class="results-header">
       <div class="results-title" id="results-title">Referências geradas</div>
-      <button class="btn-copy-all" id="btn-copy-all" onclick="copyAll(this)">⎘ Copiar tudo</button>
+      <div class="btn-row">
+        <button class="btn-action btn-copy" id="btn-copy" onclick="copyAll(this)">⎘ Copiar tudo</button>
+        <button class="btn-action btn-word" id="btn-word" onclick="exportWord()">⬇ Baixar Word (.docx)</button>
+      </div>
     </div>
     <div class="refs-output" id="refs-output"></div>
   </div>
@@ -212,6 +183,8 @@ AUTOR. **Título**: subtítulo. Local: Site, data. Disponível em: URL. Acesso e
  
 Responda APENAS com a referência. Use **negrito** só no título. Sem explicações, sem prefixos.`;
  
+let allRefs = [];
+ 
 function setLoading(on) {
   document.getElementById('gen-btn').disabled = on;
   document.getElementById('gen-label').textContent = on ? 'Gerando...' : 'Gerar referências';
@@ -229,41 +202,38 @@ function setProgress(done, total) {
 async function generateRefs() {
   const raw = document.getElementById('url-input').value;
   const urls = raw.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
- 
   if (!urls.length) { alert('Cole pelo menos uma URL válida.'); return; }
  
   setLoading(true);
   setProgress(0, urls.length);
+  allRefs = [];
  
   const resultsCard = document.getElementById('results-card');
   const output = document.getElementById('refs-output');
   resultsCard.style.display = 'block';
   output.innerHTML = '';
  
-  const allRefs = [];
- 
   for (let i = 0; i < urls.length; i++) {
     const url = urls[i];
     setProgress(i + 1, urls.length);
- 
     try {
       const ref = await callGroq(url);
-      allRefs.push(ref);
+      allRefs.push({ url, ref, ok: true });
       const div = document.createElement('div');
       div.className = 'ref-line';
-      div.innerHTML = `<div class="ref-url">${url}</div><div>${renderRef(ref)}</div>`;
+      div.innerHTML = `<div class="ref-url-small">${url}</div><div>${renderRef(ref)}</div>`;
       output.appendChild(div);
     } catch(e) {
-      allRefs.push(`[Erro: ${url}]`);
+      allRefs.push({ url, ref: '', ok: false, err: e.message });
       const div = document.createElement('div');
       div.className = 'ref-line';
-      div.innerHTML = `<div class="ref-url">${url}</div><div class="ref-error">Erro ao processar: ${e.message}</div>`;
+      div.innerHTML = `<div class="ref-url-small">${url}</div><div class="ref-error">Erro: ${e.message}</div>`;
       output.appendChild(div);
     }
   }
  
-  window._allRefs = allRefs;
-  document.getElementById('results-title').textContent = `${allRefs.length} referência${allRefs.length > 1 ? 's' : ''} gerada${allRefs.length > 1 ? 's' : ''}`;
+  const ok = allRefs.filter(r => r.ok).length;
+  document.getElementById('results-title').textContent = `${ok} referência${ok !== 1 ? 's' : ''} gerada${ok !== 1 ? 's' : ''}`;
   setLoading(false);
   document.getElementById('progress-label').textContent = 'Concluído!';
   setTimeout(() => {
@@ -280,10 +250,7 @@ async function callGroq(url) {
  
   const resp = await fetch(GROQ_API, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_KEY}`
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       temperature: 0.1,
@@ -299,7 +266,6 @@ async function callGroq(url) {
     const e = await resp.json().catch(() => ({}));
     throw new Error(e.error?.message || `Erro HTTP ${resp.status}`);
   }
- 
   const data = await resp.json();
   const text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Sem resposta da API.');
@@ -310,16 +276,83 @@ function renderRef(text) {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
  
+function plainRef(text) {
+  return text.replace(/\*\*(.+?)\*\*/g, '$1');
+}
+ 
 function copyAll(btn) {
-  if (!window._allRefs) return;
-  const text = window._allRefs
-    .map(r => r.replace(/\*\*(.+?)\*\*/g, '$1'))
-    .join('\n\n');
+  const text = allRefs.filter(r => r.ok).map(r => plainRef(r.ref)).join('\n\n');
   navigator.clipboard.writeText(text).then(() => {
     btn.textContent = '✓ Copiado!';
     btn.classList.add('copied');
     setTimeout(() => { btn.textContent = '⎘ Copiar tudo'; btn.classList.remove('copied'); }, 2500);
   });
+}
+ 
+async function exportWord() {
+  const btn = document.getElementById('btn-word');
+  btn.disabled = true;
+  btn.textContent = 'Gerando Word...';
+ 
+  try {
+    const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+ 
+    // Cabeçalho
+    const titlePara = new Paragraph({
+      children: [new TextRun({ text: 'Referências Bibliográficas', bold: true, size: 24, font: 'Times New Roman' })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 400 }
+    });
+ 
+    // Uma linha em branco após o título
+    const emptyPara = new Paragraph({ children: [new TextRun({ text: '', size: 24, font: 'Times New Roman' })] });
+ 
+    // Cada referência como parágrafo com recuo na segunda linha (hanging indent)
+    const refParas = allRefs.filter(r => r.ok).map(r => {
+      const text = r.ref;
+      // Separar partes: antes e depois do primeiro **...**
+      const parts = text.split(/(\*\*[^*]+\*\*)/g);
+      const runs = parts.map(part => {
+        const boldMatch = part.match(/^\*\*(.+)\*\*$/);
+        if (boldMatch) {
+          return new TextRun({ text: boldMatch[1], bold: true, size: 24, font: 'Times New Roman' });
+        }
+        return new TextRun({ text: part, size: 24, font: 'Times New Roman' });
+      });
+ 
+      return new Paragraph({
+        children: runs,
+        alignment: AlignmentType.JUSTIFIED,
+        indent: { left: 709, hanging: 709 }, // ~1,25cm hanging indent (ABNT)
+        spacing: { after: 240, line: 240 }   // espaço simples
+      });
+    });
+ 
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            size: { width: 11906, height: 16838 }, // A4
+            margin: { top: 1701, right: 1134, bottom: 1134, left: 1701 } // 3cm esq/sup, 2cm dir/inf
+          }
+        },
+        children: [titlePara, emptyPara, ...refParas]
+      }]
+    });
+ 
+    const buffer = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(buffer);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'referencias-abnt.docx';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Erro ao gerar Word: ' + e.message);
+  }
+ 
+  btn.disabled = false;
+  btn.textContent = '⬇ Baixar Word (.docx)';
 }
 </script>
 </body>
