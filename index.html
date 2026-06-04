@@ -12,7 +12,7 @@
   gtag("js", new Date());
   gtag("config", "G-HWM13D0G17");
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root {
     --olive: #6c8b2d;
@@ -289,64 +289,99 @@ function copyAll(btn) {
   });
 }
  
+ 
 async function exportWord() {
   const btn = document.getElementById('btn-word');
   btn.disabled = true;
   btn.textContent = 'Gerando Word...';
  
   try {
-    const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+    const refs = allRefs.filter(r => r.ok);
+    if (!refs.length) { alert('Nenhuma referência para exportar.'); return; }
  
-    // Cabeçalho
-    const titlePara = new Paragraph({
-      children: [new TextRun({ text: 'Referências Bibliográficas', bold: true, size: 24, font: 'Times New Roman' })],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 400 }
-    });
- 
-    // Uma linha em branco após o título
-    const emptyPara = new Paragraph({ children: [new TextRun({ text: '', size: 24, font: 'Times New Roman' })] });
- 
-    // Cada referência como parágrafo com recuo na segunda linha (hanging indent)
-    const refParas = allRefs.filter(r => r.ok).map(r => {
-      const text = r.ref;
-      // Separar partes: antes e depois do primeiro **...**
+    // Gerar parágrafos XML para cada referência
+    function refToXml(text) {
+      // Separar partes normais e negrito (**texto**)
       const parts = text.split(/(\*\*[^*]+\*\*)/g);
-      const runs = parts.map(part => {
+      const runs = parts.filter(p => p).map(part => {
         const boldMatch = part.match(/^\*\*(.+)\*\*$/);
         if (boldMatch) {
-          return new TextRun({ text: boldMatch[1], bold: true, size: 24, font: 'Times New Roman' });
+          return `<w:r><w:rPr><w:b/><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr><w:t xml:space="preserve">${escXml(boldMatch[1])}</w:t></w:r>`;
         }
-        return new TextRun({ text: part, size: 24, font: 'Times New Roman' });
-      });
+        return `<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr><w:t xml:space="preserve">${escXml(part)}</w:t></w:r>`;
+      }).join('');
+      // Parágrafo com hanging indent (ABNT: recuo 1,25cm = 709 twips)
+      return `<w:p><w:pPr><w:jc w:val="both"/><w:ind w:left="709" w:hanging="709"/><w:spacing w:line="240" w:lineRule="auto" w:after="240"/></w:pPr>${runs}</w:p>`;
+    }
  
-      return new Paragraph({
-        children: runs,
-        alignment: AlignmentType.JUSTIFIED,
-        indent: { left: 709, hanging: 709 }, // ~1,25cm hanging indent (ABNT)
-        spacing: { after: 240, line: 240 }   // espaço simples
-      });
-    });
+    function escXml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
  
-    const doc = new Document({
-      sections: [{
-        properties: {
-          page: {
-            size: { width: 11906, height: 16838 }, // A4
-            margin: { top: 1701, right: 1134, bottom: 1134, left: 1701 } // 3cm esq/sup, 2cm dir/inf
-          }
-        },
-        children: [titlePara, emptyPara, ...refParas]
-      }]
-    });
+    const refXmls = refs.map(r => refToXml(r.ref)).join('\n');
  
-    const buffer = await Packer.toBlob(doc);
-    const url = URL.createObjectURL(buffer);
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<w:body>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="400"/></w:pPr>
+  <w:r><w:rPr><w:b/><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr>
+  <w:t>Refer&#234;ncias Bibliogr&#225;ficas</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="240"/></w:pPr>
+  <w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr>
+  <w:t></w:t></w:r></w:p>
+${refXmls}
+<w:sectPr>
+  <w:pgSz w:w="11906" w:h="16838"/>
+  <w:pgMar w:top="1701" w:right="1134" w:bottom="1134" w:left="1701"/>
+</w:sectPr>
+</w:body>
+</w:document>`;
+ 
+    const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+ 
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault><w:rPr>
+      <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+      <w:sz w:val="24"/>
+    </w:rPr></w:rPrDefault>
+  </w:docDefaults>
+</w:styles>`;
+ 
+    const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`;
+ 
+    const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+ 
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', contentTypes);
+    zip.file('_rels/.rels', rootRels);
+    zip.file('word/document.xml', documentXml);
+    zip.file('word/_rels/document.xml.rels', relsXml);
+    zip.file('word/styles.xml', stylesXml);
+ 
+    const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'referencias-abnt.docx';
     a.click();
     URL.revokeObjectURL(url);
+ 
   } catch(e) {
     alert('Erro ao gerar Word: ' + e.message);
   }
@@ -354,6 +389,8 @@ async function exportWord() {
   btn.disabled = false;
   btn.textContent = '⬇ Baixar Word (.docx)';
 }
+ 
+ 
 </script>
 </body>
 </html>
