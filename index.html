@@ -727,24 +727,51 @@ async function verificarRefs() {
     output.appendChild(div);
 
     try {
-      const prompt = `Você é especialista em ABNT NBR 6023:2025.
+      const prompt = `Você é especialista em ABNT NBR 6023:2025 (terceira edição, 21/05/2025).
 
-Analise a referência bibliográfica abaixo e verifique se está correta conforme a norma.
+Analise a referência abaixo e siga estas instruções:
 
-Referência:
+Referência original:
 ${ref}
 
-Responda em formato estruturado:
-1. STATUS: ✅ Correta / ⚠️ Com problemas / ❌ Incorreta
-2. PROBLEMAS ENCONTRADOS: liste cada problema (ou "Nenhum" se estiver correta)
-3. REFERÊNCIA CORRIGIDA: versão correta da referência (use **negrito** no título)
+PASSO 1 — Identifique o tipo de documento (legislação, artigo, livro, TCC/dissertação, página web, etc.)
 
-Seja objetivo e específico nos problemas.`;
+PASSO 2 — Verifique se os elementos OBRIGATÓRIOS para esse tipo estão presentes:
+- Legislação: jurisdição, tipo+número+data completa, ementa, local, órgão
+- Artigo: autor, título do artigo, título do periódico, volume, número, páginas, ano
+- Livro: autor, título, edição (se houver), local, editora, ano
+- TCC/Dissertação/Tese: autor, título, ano, tipo+grau, unidade, instituição, cidade
+- Página web: autor ou organização, título, data, URL, data de acesso
+
+PASSO 3 — Se TODOS os elementos obrigatórios estiverem presentes (mesmo que mal formatados):
+Responda com o prefixo CORRIGIDA: seguido da referência corrigida conforme ABNT NBR 6023:2025.
+Use **negrito** no título. Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez. Ponto final obrigatório.
+
+PASSO 4 — Se faltar algum elemento obrigatório que você NÃO consegue inferir:
+Responda com o prefixo INCOMPLETA: seguido de uma lista clara e curta dos dados que estão faltando.
+Exemplo: INCOMPLETA: Faltam os seguintes dados: número do periódico, páginas inicial e final.
+
+Responda APENAS com "CORRIGIDA: [referência]" ou "INCOMPLETA: [dados faltantes]". Sem explicações adicionais.`;
 
       const resultado = await callGroqManual(prompt);
-      div.innerHTML = `<span class="ref-type-tag" style="background:#fff3d4;color:#8a5a00;">✅ Verificação</span>
-        <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:6px;">${ref.substring(0,100)}...</div>
-        <div style="font-family:sans-serif;font-size:13px;line-height:1.7;white-space:pre-wrap;">${resultado}</div>`;
+
+      if (resultado.startsWith('CORRIGIDA:')) {
+        const refCorrigida = resultado.replace(/^CORRIGIDA:\s*/,'').trim();
+        allRefs.push({url: '(verificada)', ref: refCorrigida, type:'manual', ok:true});
+        div.innerHTML = `<span class="ref-type-tag" style="background:#d4ffd8;color:#006b10;">✅ Corrigida</span>
+          <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:6px;">Original: ${ref.substring(0,100)}...</div>
+          <div>${renderRef(refCorrigida)}</div>`;
+        updateResultsHeader();
+      } else {
+        // Incompleta — mostrar o que falta com campo para completar
+        const faltando = resultado.replace(/^INCOMPLETA:\s*/,'').trim();
+        const escapedRef = ref.replace(/`/g,"'").replace(/\\/g,'\\');
+        div.innerHTML = `<span class="ref-type-tag" style="background:#fff0d4;color:#8a5a00;">⚠️ Dados insuficientes</span>
+          <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:6px;">Original: ${ref.substring(0,100)}...</div>
+          <div style="font-family:sans-serif;font-size:13px;color:#8a5a00;margin-bottom:8px;">ℹ️ ${faltando}</div>
+          <textarea id="comp-${Date.now()}" style="width:100%;height:60px;font-size:12px;border:1px solid #e2e6d8;border-radius:6px;padding:6px;font-family:monospace;" placeholder="Complete os dados faltantes aqui..."></textarea>
+          <button class="btn-fill-manual" style="margin-top:6px;" onclick="completarECorrigir(this, \`${escapedRef}\`, \`${faltando}\`)">🔄 Corrigir com os dados completados</button>`;
+      }
     } catch(e) {
       div.innerHTML = `<span class="ref-type-tag" style="background:#fff3d4;color:#8a5a00;">✅ Verificação</span><div class="ref-error">Erro: ${e.message}</div>`;
     }
@@ -810,6 +837,46 @@ Sem explicações adicionais.`;
     div.innerHTML = `<span class="ref-type-tag" style="background:#d4f0d4;color:#006b10;">📋 Organizar</span><div class="ref-error">Erro: ${e.message}</div>`;
   }
   resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+
+// ── Completar e corrigir referência incompleta ───────────────────────────────
+async function completarECorrigir(btn, refOriginal, faltando) {
+  const textarea = btn.previousElementSibling;
+  const complemento = textarea.value.trim();
+  if (!complemento) { alert('Preencha os dados faltantes antes de corrigir.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Corrigindo...';
+
+  const prompt = `Você é especialista em ABNT NBR 6023:2025.
+
+Corrija a referência bibliográfica abaixo usando os dados complementares fornecidos.
+
+Referência original (incompleta):
+${refOriginal}
+
+Dados complementares fornecidos pelo usuário:
+${complemento}
+
+Gere a referência completa e correta conforme ABNT NBR 6023:2025.
+Use **negrito** no título. Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez. Ponto final obrigatório.
+Responda APENAS com a referência corrigida. Sem prefixos, sem explicações.`;
+
+  try {
+    const refCorrigida = await callGroqManual(prompt);
+    allRefs.push({url: '(verificada)', ref: refCorrigida, type:'manual', ok:true});
+
+    const container = btn.closest('.ref-line');
+    container.innerHTML = `<span class="ref-type-tag" style="background:#d4ffd8;color:#006b10;">✅ Corrigida</span>
+      <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:6px;">Original: ${refOriginal.substring(0,100)}...</div>
+      <div>${renderRef(refCorrigida)}</div>`;
+    updateResultsHeader();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🔄 Corrigir com os dados completados';
+    alert('Erro: ' + e.message);
+  }
 }
 
 function switchTab(tab, btn) {
