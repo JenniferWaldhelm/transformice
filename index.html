@@ -1391,6 +1391,14 @@ function escAttr(s) {
   return s.replace(/'/g,"\\'").replace(/"/g,'&quot;');
 }
 
+function clearResults() {
+  if (!confirm('Limpar todo o histórico de referências geradas?')) return;
+  allRefs = [];
+  document.getElementById('refs-output').innerHTML = '';
+  document.getElementById('results-card').style.display = 'none';
+  document.getElementById('results-title').textContent = 'Referências geradas';
+}
+
 function updateResultsHeader() {
   const ok = allRefs.filter(r=>r.ok).length;
   document.getElementById('results-title').textContent = `${ok} referência${ok!==1?'s':''} gerada${ok!==1?'s':''}`;
