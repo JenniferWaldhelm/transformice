@@ -12,6 +12,8 @@
   gtag("config", "G-HWM13D0G17");
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   :root {
     --olive: #6c8b2d; --green: #7aa91a; --dark-olive: #606d3d;
@@ -111,6 +113,7 @@
       <button class="tab active" onclick="switchTab('auto',this)">🔗 URL</button>
       <button class="tab" onclick="switchTab('doi',this)">🔬 DOI</button>
       <button class="tab" onclick="switchTab('isbn',this)">📚 ISBN</button>
+      <button class="tab" onclick="switchTab('pdf',this)">📄 PDF/Arquivo</button>
       <button class="tab" onclick="switchTab('converter',this)">🔄 Converter</button>
       <button class="tab" onclick="switchTab('verificar',this)">✅ Verificar</button>
       <button class="tab" onclick="switchTab('organizar',this)">📋 Organizar</button>
@@ -160,6 +163,42 @@ https://doi.org/10.1038/s41586-021-03819-2"></textarea>
       <p class="hint">ISBN-10 ou ISBN-13, com ou sem hífens — metadados via Open Library e Google Books.</p>
       <button class="btn-generate" onclick="generateISBN()">
         <span>Gerar referências por ISBN</span>
+      </button>
+    </div>
+
+    <!-- TAB PDF -->
+    <div class="tab-pane" id="pane-pdf">
+      <div class="card-title">Gerar referência a partir de PDF ou arquivo</div>
+      <div id="pdf-dropzone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:2.5rem 1rem;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg);" onclick="document.getElementById('pdf-file').click()" ondragover="pdfDragOver(event)" ondragleave="pdfDragLeave(event)" ondrop="pdfDrop(event)">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">📄</div>
+        <div style="font-size:14px;font-weight:600;color:var(--dark);margin-bottom:4px;">Clique ou arraste o arquivo aqui</div>
+        <div style="font-size:12px;color:var(--muted);">PDF, DOCX ou TXT — o sistema extrai os metadados automaticamente</div>
+        <input type="file" id="pdf-file" accept=".pdf,.docx,.txt" style="display:none;" onchange="pdfFileSelected(this)">
+      </div>
+      <div id="pdf-file-info" style="display:none;margin-top:10px;padding:10px 14px;background:#eaf0db;border-radius:var(--radius-sm);font-size:13px;color:var(--dark-olive);font-family:monospace;"></div>
+      <div style="margin-top:12px;">
+        <div class="form-group">
+          <label>Tipo de documento (opcional — detectado automaticamente)</label>
+          <select id="pdf-tipo">
+            <option value="auto">Detectar automaticamente</option>
+            <option value="academico">TCC / Dissertação / Tese</option>
+            <option value="artigo">Artigo científico</option>
+            <option value="livro">Livro / Relatório</option>
+            <option value="legislacao">Legislação</option>
+            <option value="web">Documento técnico / Outro</option>
+          </select>
+        </div>
+      </div>
+      <div id="ocr-progress" style="display:none;margin-top:12px;">
+        <div style="font-size:12px;font-weight:600;color:var(--dark-olive);margin-bottom:6px;" id="ocr-status">Iniciando OCR...</div>
+        <div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden;">
+          <div id="ocr-bar" style="height:100%;background:var(--amber);border-radius:4px;transition:width 0.3s ease;width:0%;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;" id="ocr-detail"></div>
+      </div>
+      <canvas id="pdf-canvas" style="display:none;max-width:100%;margin-top:10px;border:1px solid var(--border);border-radius:var(--radius-sm);"></canvas>
+      <button class="btn-generate" id="pdf-btn" onclick="generateFromPDF()" style="margin-top:1rem;" disabled>
+        <span id="pdf-label">Selecione um arquivo primeiro</span>
       </button>
     </div>
 
@@ -877,6 +916,245 @@ Responda APENAS com a referência corrigida. Sem prefixos, sem explicações.`;
     btn.textContent = '🔄 Corrigir com os dados completados';
     alert('Erro: ' + e.message);
   }
+}
+
+
+// ── PDF / Arquivo com OCR ─────────────────────────────────────────────────────
+let pdfFileData = null;
+let pdfRawBuffer = null;
+
+// Configurar worker do PDF.js
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+function pdfDragOver(e) {
+  e.preventDefault();
+  document.getElementById('pdf-dropzone').style.borderColor = 'var(--olive)';
+  document.getElementById('pdf-dropzone').style.background = '#f3f7e8';
+}
+function pdfDragLeave(e) {
+  document.getElementById('pdf-dropzone').style.borderColor = 'var(--border)';
+  document.getElementById('pdf-dropzone').style.background = 'var(--bg)';
+}
+function pdfDrop(e) {
+  e.preventDefault();
+  pdfDragLeave(e);
+  const file = e.dataTransfer.files[0];
+  if (file) loadPDFFile(file);
+}
+function pdfFileSelected(input) {
+  if (input.files[0]) loadPDFFile(input.files[0]);
+}
+
+function loadPDFFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['pdf','docx','txt'].includes(ext)) {
+    alert('Formato não suportado. Use PDF, DOCX ou TXT.'); return;
+  }
+
+  pdfFileData = null;
+  pdfRawBuffer = null;
+  const info = document.getElementById('pdf-file-info');
+  info.style.display = 'block';
+  info.textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB) — lendo...`;
+
+  const reader = new FileReader();
+
+  if (ext === 'txt') {
+    reader.onload = e => {
+      pdfFileData = { name: file.name, ext, text: e.target.result.substring(0, 8000), needsOCR: false };
+      info.textContent = `✓ ${file.name} — ${pdfFileData.text.length} caracteres lidos`;
+      enablePDFBtn();
+    };
+    reader.readAsText(file);
+
+  } else if (ext === 'docx') {
+    reader.onload = async e => {
+      try {
+        const zip = await JSZip.loadAsync(e.target.result);
+        const xml = await zip.file('word/document.xml').async('text');
+        const text = xml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').substring(0, 8000);
+        pdfFileData = { name: file.name, ext, text, needsOCR: false };
+        info.textContent = `✓ ${file.name} — ${text.length} caracteres extraídos`;
+        enablePDFBtn();
+      } catch(err) {
+        pdfFileData = { name: file.name, ext, text: `[Arquivo: ${file.name}]`, needsOCR: false };
+        info.textContent = `✓ ${file.name} — usando nome do arquivo`;
+        enablePDFBtn();
+      }
+    };
+    reader.readAsArrayBuffer(file);
+
+  } else if (ext === 'pdf') {
+    reader.onload = async e => {
+      pdfRawBuffer = e.target.result;
+      try {
+        // Tentar extração de texto nativa com PDF.js
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(pdfRawBuffer) }).promise;
+        let text = '';
+        const maxPages = Math.min(pdf.numPages, 3); // só primeiras 3 páginas
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdf.getPage(i);
+          const tc = await page.getTextContent();
+          text += tc.items.map(item => item.str).join(' ') + ' ';
+        }
+        text = text.trim().replace(/\s+/g,' ').substring(0, 8000);
+
+        if (text.length > 100) {
+          // PDF com texto nativo — sem precisar de OCR
+          pdfFileData = { name: file.name, ext, text, needsOCR: false, numPages: pdf.numPages };
+          info.textContent = `✓ ${file.name} — ${text.length} caracteres extraídos (${pdf.numPages} páginas)`;
+          enablePDFBtn();
+        } else {
+          // PDF escaneado — vai precisar de OCR
+          pdfFileData = { name: file.name, ext, text: '', needsOCR: true, numPages: pdf.numPages, pdfDoc: pdf };
+          info.innerHTML = `✓ ${file.name} — <strong style="color:#8a5a00;">PDF escaneado detectado</strong> — OCR será executado ao gerar`;
+          enablePDFBtn(true);
+        }
+      } catch(err) {
+        pdfFileData = { name: file.name, ext, text: `[PDF: ${file.name}]`, needsOCR: false };
+        info.textContent = `✓ ${file.name} — erro na leitura, usando nome do arquivo`;
+        enablePDFBtn();
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function enablePDFBtn(isOCR = false) {
+  const btn = document.getElementById('pdf-btn');
+  btn.disabled = false;
+  document.getElementById('pdf-label').textContent = isOCR
+    ? '🔍 Executar OCR e gerar referência'
+    : 'Gerar referência';
+}
+
+async function runOCR(pdfDoc) {
+  const ocrProgress = document.getElementById('ocr-progress');
+  const ocrStatus = document.getElementById('ocr-status');
+  const ocrBar = document.getElementById('ocr-bar');
+  const ocrDetail = document.getElementById('ocr-detail');
+  const canvas = document.getElementById('pdf-canvas');
+  ocrProgress.style.display = 'block';
+
+  let fullText = '';
+  const maxPages = Math.min(pdfDoc.numPages, 3);
+
+  // Inicializar Tesseract worker
+  ocrStatus.textContent = '🔄 Inicializando OCR (pode levar alguns segundos)...';
+  const worker = await Tesseract.createWorker('por+eng', 1, {
+    logger: m => {
+      if (m.status === 'recognizing text') {
+        const pct = Math.round(m.progress * 100);
+        ocrBar.style.width = pct + '%';
+        ocrDetail.textContent = `Reconhecendo texto: ${pct}%`;
+      }
+    }
+  });
+
+  for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+    ocrStatus.textContent = `📄 Processando página ${pageNum} de ${maxPages}...`;
+    ocrBar.style.width = '0%';
+
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 2.0 }); // escala 2x para melhor qualidade
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.display = 'block';
+
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    // OCR na imagem do canvas
+    const { data: { text } } = await worker.recognize(canvas);
+    fullText += text + ' ';
+
+    ocrBar.style.width = '100%';
+  }
+
+  await worker.terminate();
+  canvas.style.display = 'none';
+  ocrProgress.style.display = 'none';
+
+  return fullText.trim().replace(/\s+/g,' ').substring(0, 8000);
+}
+
+async function generateFromPDF() {
+  if (!pdfFileData) { alert('Selecione um arquivo primeiro.'); return; }
+
+  const tipoSel = document.getElementById('pdf-tipo').value;
+  const btn = document.getElementById('pdf-btn');
+  btn.disabled = true;
+  document.getElementById('pdf-label').textContent = 'Gerando...';
+
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  const tipoInstrucao = tipoSel === 'auto' ? 'Identifique o tipo de documento pelo conteúdo e aplique o formato ABNT correto.' : `Trate como: ${tipoSel}.`;
+
+  // Se for PDF escaneado, executar OCR primeiro
+  if (pdfFileData.needsOCR && pdfFileData.pdfDoc) {
+    try {
+      document.getElementById('pdf-label').textContent = 'Executando OCR...';
+      const ocrText = await runOCR(pdfFileData.pdfDoc);
+      pdfFileData.text = ocrText;
+      document.getElementById('pdf-file-info').textContent = `✓ OCR concluído — ${ocrText.length} caracteres extraídos`;
+    } catch(ocrErr) {
+      pdfFileData.text = `[OCR falhou: ${ocrErr.message}. Arquivo: ${pdfFileData.name}]`;
+    }
+  }
+
+  const prompt = `Você é especialista em ABNT NBR 6023:2025.
+
+Analise o conteúdo/metadados do arquivo abaixo e gere a referência bibliográfica correta.
+
+Nome do arquivo: ${pdfFileData.name}
+Conteúdo extraído (primeiros caracteres):
+${pdfFileData.text.substring(0, 4000)}
+
+${tipoInstrucao}
+
+Extraia do conteúdo: autores, título, subtítulo, ano, editora/instituição, local, tipo do trabalho (se acadêmico), periódico (se artigo), volume/número/páginas (se artigo), ementa (se legislação).
+
+Se algum dado essencial não estiver no conteúdo, use [dado não identificado] no lugar.
+
+Formate conforme ABNT NBR 6023:2025:
+- Título em **negrito**
+- Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+- Ponto final obrigatório
+- Data de acesso (se documento online): ${accessDate}
+
+Responda APENAS com a referência formatada. Sem explicações.`;
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  const div = document.createElement('div');
+  div.className = 'ref-line';
+  div.innerHTML = `<span class="ref-type-tag" style="background:#e8f4ff;color:#00508a;">📄 Arquivo</span>
+    <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
+    <div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Gerando referência...</div>`;
+  output.appendChild(div);
+
+  try {
+    const ref = await callGroqManual(prompt);
+    allRefs.push({url: pdfFileData.name, ref, type:'manual', ok:true});
+    div.innerHTML = `<span class="ref-type-tag" style="background:#e8f4ff;color:#00508a;">📄 Arquivo</span>
+      <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
+      <div>${renderRef(ref)}</div>`;
+    updateResultsHeader();
+  } catch(e) {
+    div.innerHTML = `<span class="ref-type-tag" style="background:#e8f4ff;color:#00508a;">📄 Arquivo</span>
+      <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
+      <div class="ref-error">Erro: ${e.message}</div>`;
+  }
+
+  btn.disabled = false;
+  document.getElementById('pdf-label').textContent = 'Gerar referência';
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function switchTab(tab, btn) {
