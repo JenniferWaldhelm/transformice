@@ -19,7 +19,6 @@
     --green: #7aa91a;
     --dark-olive: #606d3d;
     --amber: #ffb82f;
-    --teal: #57a795;
     --dark: #525050;
     --bg: #f7f8f4;
     --white: #ffffff;
@@ -30,95 +29,56 @@
     --radius-sm: 6px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: var(--bg); color: var(--text);
-    min-height: 100vh; padding: 2rem 1rem 4rem;
-  }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem 4rem; }
   .container { max-width: 760px; margin: 0 auto; }
   .header { text-align: center; margin-bottom: 2rem; }
   .brand { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; color: var(--olive); margin-bottom: 0.3rem; }
-  h1 { font-size: 1rem; font-weight: 400; color: var(--muted); margin-bottom: 0.6rem; }
-  .norm-tag {
-    display: inline-flex; align-items: center;
-    font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
-    color: var(--dark-olive); background: #eaf0db; border: 1px solid #cdd8b0;
-    border-radius: 20px; padding: 3px 10px;
-  }
-  .card {
-    background: var(--white); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem;
-  }
-  .card-title {
-    font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem;
-  }
-  textarea {
-    width: 100%; height: 160px; border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px;
-    color: var(--text); background: var(--bg); outline: none; resize: vertical;
-    transition: border-color 0.15s; font-family: monospace; line-height: 1.6;
-  }
+  .subtitle { font-size: 1rem; font-weight: 400; color: var(--muted); margin-bottom: 0.6rem; }
+  .norm-tag { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dark-olive); background: #eaf0db; border: 1px solid #cdd8b0; border-radius: 20px; padding: 3px 10px; }
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem; }
+  .card-title { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem; }
+  textarea { width: 100%; height: 160px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; color: var(--text); background: var(--bg); outline: none; resize: vertical; transition: border-color 0.15s; font-family: monospace; line-height: 1.6; }
   textarea:focus { border-color: var(--olive); background: var(--white); }
   textarea::placeholder { color: var(--muted); font-family: 'Segoe UI', sans-serif; }
   .hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
-  .btn-generate {
-    width: 100%; padding: 13px; background: var(--olive); color: var(--white);
-    border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    gap: 8px; margin-top: 1rem; transition: background 0.15s;
-  }
+  .btn-generate { width: 100%; padding: 13px; background: var(--olive); color: var(--white); border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 1rem; transition: background 0.15s; }
   .btn-generate:hover { background: var(--dark-olive); }
   .btn-generate:disabled { background: #aab890; cursor: not-allowed; }
-  .spinner {
-    width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4);
-    border-top-color: white; border-radius: 50%;
-    animation: spin 0.7s linear infinite; display: none;
-  }
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .progress-bar-wrap {
-    background: var(--border); border-radius: 4px; height: 6px;
-    margin-top: 1rem; display: none; overflow: hidden;
-  }
+  .progress-wrap { background: var(--border); border-radius: 4px; height: 6px; margin-top: 1rem; display: none; overflow: hidden; }
   .progress-bar { height: 100%; background: var(--green); border-radius: 4px; transition: width 0.3s ease; width: 0%; }
   .progress-label { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: center; display: none; }
-  .results-card {
-    background: var(--white); border: 1px solid #c8dda8;
-    border-radius: var(--radius); padding: 1.5rem; display: none;
-  }
+  .results-card { background: var(--white); border: 1px solid #c8dda8; border-radius: var(--radius); padding: 1.5rem; display: none; }
   .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
   .results-title { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dark-olive); }
   .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .btn-action {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 600; border: none;
-    border-radius: var(--radius-sm); padding: 7px 16px; cursor: pointer; transition: all 0.15s;
-  }
+  .btn-action { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; border: none; border-radius: var(--radius-sm); padding: 7px 16px; cursor: pointer; transition: all 0.15s; }
   .btn-copy { background: var(--dark-olive); color: white; }
   .btn-copy:hover { background: var(--olive); }
   .btn-copy.copied { background: var(--green); }
   .btn-word { background: #1f5c9e; color: white; }
   .btn-word:hover { background: #174a80; }
   .btn-word:disabled { background: #aaa; cursor: not-allowed; }
-  .refs-output {
-    width: 100%; min-height: 200px; border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: 12px; font-size: 13.5px; line-height: 1.8;
-    font-family: Georgia, 'Times New Roman', serif; color: var(--text);
-    background: var(--bg); white-space: pre-wrap; word-break: break-word;
-  }
+  .refs-output { width: 100%; min-height: 120px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; font-size: 13.5px; line-height: 1.8; font-family: Georgia, 'Times New Roman', serif; color: var(--text); background: var(--bg); }
   .ref-line { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
   .ref-line:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-  .ref-error { color: #c03030; font-family: sans-serif; font-size: 12px; font-style: italic; }
   .ref-url-small { font-size: 10.5px; color: var(--muted); font-family: monospace; margin-bottom: 4px; }
+  .ref-type-tag { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: 4px; margin-bottom: 5px; font-family: sans-serif; }
+  .tag-lei { background: #fff0d4; color: #8a5a00; }
+  .tag-artigo { background: #d4eaff; color: #00508a; }
+  .tag-tcc { background: #ead4ff; color: #5a008a; }
+  .tag-livro { background: #d4ffd8; color: #006b10; }
+  .tag-web { background: #f0f0f0; color: #555; }
+  .ref-error { color: #c03030; font-family: sans-serif; font-size: 12px; font-style: italic; }
   .footer-note { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 1.5rem; line-height: 1.6; }
 </style>
 </head>
 <body>
 <div class="container">
-
   <div class="header">
     <div class="brand">Transformice</div>
-    <h1>Gerador de Referências Bibliográficas</h1>
+    <p class="subtitle">Gerador de Referências Bibliográficas</p>
     <div class="norm-tag">✓ ABNT NBR 6023:2025 — Terceira edição</div>
   </div>
 
@@ -126,17 +86,16 @@
     <div class="card-title">Cole as URLs das suas fontes</div>
     <textarea id="url-input" placeholder="Cole uma URL por linha, por exemplo:
 
-https://www.site.gov.br/pagina
-https://www.outro-site.com.br/artigo
-https://exemplo.org/documento"></textarea>
-    <p class="hint">Uma URL por linha. Pode colar quantas quiser.</p>
+https://www.legislacao.pr.gov.br/decreto/4435
+https://doi.org/10.1590/xyz
+https://acervodigital.ufpr.br/handle/1884/58488
+https://www.bbc.com/portuguese/articles/xyz"></textarea>
+    <p class="hint">Uma URL por linha. O tipo de documento é detectado automaticamente.</p>
     <button class="btn-generate" id="gen-btn" onclick="generateRefs()">
       <span id="gen-label">Gerar referências</span>
       <div class="spinner" id="spinner"></div>
     </button>
-    <div class="progress-bar-wrap" id="progress-wrap">
-      <div class="progress-bar" id="progress-bar"></div>
-    </div>
+    <div class="progress-wrap" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
     <div class="progress-label" id="progress-label"></div>
   </div>
 
@@ -151,37 +110,122 @@ https://exemplo.org/documento"></textarea>
     <div class="refs-output" id="refs-output"></div>
   </div>
 
-  <p class="footer-note">
-    Transformice · Referências geradas com IA conforme ABNT NBR 6023:2025 · Verifique sempre os metadados
-  </p>
-
+  <p class="footer-note">Transformice · Referências geradas com IA conforme ABNT NBR 6023:2025 · Verifique sempre os metadados</p>
 </div>
 
 <script>
 const GROQ_KEY = "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";
 const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
 
-const SYSTEM = `Você é especialista em normas brasileiras de documentação com domínio completo da ABNT NBR 6023:2025 (terceira edição, 21/05/2025).
+// ── Detectar tipo de documento pela URL ──────────────────────────────────────
+function detectType(url) {
+  const u = url.toLowerCase();
+  if (/decreto|lei[-_\s]|portaria|resolucao|resolução|instrucao|instrução|medida.provisoria|emenda|legisla[cç]|norma|ato.normativo|diario.oficial|jusbrasil|planalto\.gov|camara\.leg|senado\.leg|casa.civil|lexml|atos\.normativos/.test(u)) return 'legislacao';
+  if (/doi\.org|scielo|pubmed|periodico|revista|journal|artigo|article|repositorio.*artigo/.test(u)) return 'artigo';
+  if (/tcc|dissertac|disserta|tese|monografia|trabalho.conclus|bdtd|repositorio|acervo.digital|lume\.ufrgs|dspace|handle/.test(u)) return 'academico';
+  if (/books\.google|isbn|editora|livraria|amazon.*livro/.test(u)) return 'livro';
+  return 'web';
+}
 
-Gere referências para documentos online conforme seções 6.6, 7.20 e 8.13.
+// ── System prompts especializados ────────────────────────────────────────────
+const PROMPTS = {
 
-REGRAS:
-1. Pessoa física: SOBRENOME, Nome. (último sobrenome maiúsculo)
-2. Pessoa jurídica: NOME DA ORGANIZAÇÃO EM MAIÚSCULAS conforme aparece no site
-3. Autoria desconhecida: inicia pelo TÍTULO EM MAIÚSCULAS (nunca "Anônimo")
-4. Até 3 autores: todos indicados. 4 ou mais: primeiro + et al.
-5. Título em negrito: **Título do documento**
-6. Subtítulo separado por dois pontos
-7. DOI antes de "Disponível em:" quando disponível
-8. Meses (Anexo A): jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
-9. Local não identificável: [S. l.]
-10. Redes sociais: indicar nome da rede e perfil após a data
-11. Ponto final obrigatório
+  legislacao: `Você é especialista em normas ABNT NBR 6023:2025, seção 7.11 (Documento jurídico).
 
-FORMATO GERAL:
-AUTOR. **Título**: subtítulo. Local: Site, data. Disponível em: URL. Acesso em: [data atual].
+Para LEGISLAÇÃO (decreto, lei, portaria, resolução, instrução normativa, etc.) os elementos OBRIGATÓRIOS são:
+1. JURISDIÇÃO em maiúsculas (ex: BRASIL. / PARANÁ. / SÃO PAULO (Município).)
+2. Tipo do ato + número + data completa (ex: Decreto nº 4.435, de 29 de junho de 2016.)
+3. Ementa completa transcrita conforme publicada (a descrição do que trata o ato)
+4. Local de publicação: cidade do órgão
+5. Órgão publicador real (Casa Civil, Assembleia Legislativa, etc.) — NÃO o site que hospeda o PDF
+6. Ano
+7. Disponível em: URL. Acesso em: [data].
 
-Responda APENAS com a referência. Use **negrito** só no título. Sem explicações, sem prefixos.`;
+FORMATO:
+JURISDIÇÃO. Tipo nº X.XXX, de DD de mês de AAAA. Ementa completa. Local: Órgão, ano. Disponível em: URL. Acesso em: DD mês. AAAA.
+
+EXEMPLO:
+PARANÁ. Decreto nº 4.435, de 29 de junho de 2016. Declara as Áreas de Interesse de Mananciais de Abastecimento Público da Região Metropolitana de Curitiba e dá outras providências. Curitiba: Casa Civil, 2016. Disponível em: https://url. Acesso em: 8 jun. 2026.
+
+Meses abreviados (Anexo A NBR 6023:2025): jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência formatada. Sem explicações.`,
+
+  artigo: `Você é especialista em normas ABNT NBR 6023:2025, seção 7.7.5 e 7.7.6 (Artigo de publicação periódica).
+
+Para ARTIGOS CIENTÍFICOS os elementos OBRIGATÓRIOS são:
+1. AUTOR(ES): SOBRENOME, Nome. Até 3 autores: todos. 4+: primeiro + et al.
+2. Título do artigo (sem negrito, sem aspas)
+3. **Título do periódico** em negrito
+4. Local, volume (v.), número (n.), páginas (p. XX-XX), mês abreviado e ano
+5. DOI se disponível
+6. Disponível em: URL. Acesso em: [data].
+
+FORMATO:
+SOBRENOME, Nome. Título do artigo. **Título do Periódico**, Local, v. X, n. X, p. XX-XX, mês. ano. DOI: xxx. Disponível em: URL. Acesso em: DD mês. AAAA.
+
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. Use **negrito** só no título do periódico. Sem explicações.`,
+
+  academico: `Você é especialista em normas ABNT NBR 6023:2025, seção 7.1.2 (Trabalho acadêmico).
+
+Para TESES, DISSERTAÇÕES e TCCs os elementos OBRIGATÓRIOS são:
+1. AUTOR: SOBRENOME, Nome.
+2. **Título**: subtítulo (se houver)
+3. Ano de depósito/defesa
+4. Tipo do trabalho entre parênteses: Tese (Doutorado em ...) ou Dissertação (Mestrado em ...) ou Trabalho de Conclusão de Curso (Bacharelado/Especialização em ...)
+5. Traço (–) + Unidade acadêmica (Faculdade/Departamento)
+6. Vírgula + Instituição
+7. Cidade, ano
+8. Disponível em: URL. Acesso em: [data].
+
+FORMATO:
+SOBRENOME, Nome. **Título**: subtítulo. Ano. Tipo (Grau em Área) – Unidade, Instituição, Cidade, ano. Disponível em: URL. Acesso em: DD mês. AAAA.
+
+EXEMPLO:
+SILVA, Ana Paula. **Gestão de recursos hídricos urbanos**: estudo de caso em Curitiba. 2019. Dissertação (Mestrado em Engenharia Ambiental) – Setor de Tecnologia, Universidade Federal do Paraná, Curitiba, 2019. Disponível em: URL. Acesso em: 8 jun. 2026.
+
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. Use **negrito** só no título. Sem explicações.`,
+
+  livro: `Você é especialista em normas ABNT NBR 6023:2025, seção 7.1 e 7.2 (Monografia/Livro).
+
+Para LIVROS os elementos OBRIGATÓRIOS são:
+1. AUTOR(ES): SOBRENOME, Nome.
+2. **Título**: subtítulo
+3. Edição (se houver): X. ed.
+4. Local: Editora, ano.
+5. ISBN se disponível
+6. Para e-book ou livro online: Disponível em: URL. Acesso em: [data].
+
+FORMATO:
+SOBRENOME, Nome. **Título**: subtítulo. X. ed. Local: Editora, ano. ISBN XXXX.
+
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. Use **negrito** só no título. Sem explicações.`,
+
+  web: `Você é especialista em normas ABNT NBR 6023:2025, seção 7.20 (Documento de acesso exclusivo em meio eletrônico).
+
+Para PÁGINAS WEB os elementos OBRIGATÓRIOS são:
+1. AUTOR ou ORGANIZAÇÃO em maiúsculas (se não houver autor identificável, inicie pelo TÍTULO EM MAIÚSCULAS)
+2. **Título da página**
+3. Local (se identificável) ou [S. l.]
+4. Data de publicação ou atualização
+5. Disponível em: URL. Acesso em: [data].
+
+FORMATO:
+AUTOR/ORGANIZAÇÃO. **Título da página**. Local, data. Disponível em: URL. Acesso em: DD mês. AAAA.
+
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. Use **negrito** só no título. Sem explicações.`
+};
+
+const TYPE_LABELS = {
+  legislacao: { label: 'Legislação', css: 'tag-lei' },
+  artigo:     { label: 'Artigo científico', css: 'tag-artigo' },
+  academico:  { label: 'Trab. acadêmico', css: 'tag-tcc' },
+  livro:      { label: 'Livro', css: 'tag-livro' },
+  web:        { label: 'Página web', css: 'tag-web' }
+};
 
 let allRefs = [];
 
@@ -193,9 +237,8 @@ function setLoading(on) {
   document.getElementById('progress-label').style.display = on ? 'block' : 'none';
 }
 
-function setProgress(done, total) {
-  const pct = Math.round((done / total) * 100);
-  document.getElementById('progress-bar').style.width = pct + '%';
+function setProgress(done, total, url) {
+  document.getElementById('progress-bar').style.width = Math.round((done/total)*100) + '%';
   document.getElementById('progress-label').textContent = `Processando ${done} de ${total}...`;
 }
 
@@ -216,18 +259,27 @@ async function generateRefs() {
   for (let i = 0; i < urls.length; i++) {
     const url = urls[i];
     setProgress(i + 1, urls.length);
+    const type = detectType(url);
+    const { label, css } = TYPE_LABELS[type];
+
     try {
-      const ref = await callGroq(url);
-      allRefs.push({ url, ref, ok: true });
+      const ref = await callGroq(url, type);
+      allRefs.push({ url, ref, type, ok: true });
       const div = document.createElement('div');
       div.className = 'ref-line';
-      div.innerHTML = `<div class="ref-url-small">${url}</div><div>${renderRef(ref)}</div>`;
+      div.innerHTML = `
+        <div class="ref-url-small">${url}</div>
+        <span class="ref-type-tag ${css}">${label}</span>
+        <div>${renderRef(ref)}</div>`;
       output.appendChild(div);
     } catch(e) {
-      allRefs.push({ url, ref: '', ok: false, err: e.message });
+      allRefs.push({ url, ref: '', type, ok: false });
       const div = document.createElement('div');
       div.className = 'ref-line';
-      div.innerHTML = `<div class="ref-url-small">${url}</div><div class="ref-error">Erro: ${e.message}</div>`;
+      div.innerHTML = `
+        <div class="ref-url-small">${url}</div>
+        <span class="ref-type-tag ${css}">${label}</span>
+        <div class="ref-error">Erro: ${e.message}</div>`;
       output.appendChild(div);
     }
   }
@@ -243,7 +295,7 @@ async function generateRefs() {
   resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-async function callGroq(url) {
+async function callGroq(url, type) {
   const today = new Date();
   const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
   const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
@@ -254,10 +306,10 @@ async function callGroq(url) {
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       temperature: 0.1,
-      max_tokens: 500,
+      max_tokens: 600,
       messages: [
-        { role: 'system', content: SYSTEM },
-        { role: 'user', content: `URL: ${url}\n\nData de acesso: ${accessDate}\n\nGere a referência conforme ABNT NBR 6023:2025. Responda apenas com a referência formatada.` }
+        { role: 'system', content: PROMPTS[type] },
+        { role: 'user', content: `URL: ${url}\n\nData de acesso: ${accessDate}\n\nGere a referência conforme ABNT NBR 6023:2025 para este tipo de documento. Responda apenas com a referência formatada.` }
       ]
     })
   });
@@ -276,12 +328,8 @@ function renderRef(text) {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
 
-function plainRef(text) {
-  return text.replace(/\*\*(.+?)\*\*/g, '$1');
-}
-
 function copyAll(btn) {
-  const text = allRefs.filter(r => r.ok).map(r => plainRef(r.ref)).join('\n\n');
+  const text = allRefs.filter(r => r.ok).map(r => r.ref.replace(/\*\*(.+?)\*\*/g, '$1')).join('\n\n');
   navigator.clipboard.writeText(text).then(() => {
     btn.textContent = '✓ Copiado!';
     btn.classList.add('copied');
@@ -289,108 +337,54 @@ function copyAll(btn) {
   });
 }
 
-
 async function exportWord() {
   const btn = document.getElementById('btn-word');
   btn.disabled = true;
   btn.textContent = 'Gerando Word...';
-
   try {
     const refs = allRefs.filter(r => r.ok);
     if (!refs.length) { alert('Nenhuma referência para exportar.'); return; }
 
-    // Gerar parágrafos XML para cada referência
+    function escXml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
     function refToXml(text) {
-      // Separar partes normais e negrito (**texto**)
       const parts = text.split(/(\*\*[^*]+\*\*)/g);
       const runs = parts.filter(p => p).map(part => {
-        const boldMatch = part.match(/^\*\*(.+)\*\*$/);
-        if (boldMatch) {
-          return `<w:r><w:rPr><w:b/><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr><w:t xml:space="preserve">${escXml(boldMatch[1])}</w:t></w:r>`;
-        }
+        const m = part.match(/^\*\*(.+)\*\*$/);
+        if (m) return `<w:r><w:rPr><w:b/><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr><w:t xml:space="preserve">${escXml(m[1])}</w:t></w:r>`;
         return `<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr><w:t xml:space="preserve">${escXml(part)}</w:t></w:r>`;
       }).join('');
-      // Parágrafo com hanging indent (ABNT: recuo 1,25cm = 709 twips)
       return `<w:p><w:pPr><w:jc w:val="both"/><w:ind w:left="709" w:hanging="709"/><w:spacing w:line="240" w:lineRule="auto" w:after="240"/></w:pPr>${runs}</w:p>`;
     }
 
-    function escXml(s) {
-      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
     const refXmls = refs.map(r => refToXml(r.ref)).join('\n');
-
     const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
-  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
 <w:body>
 <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="400"/></w:pPr>
   <w:r><w:rPr><w:b/><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr>
   <w:t>Refer&#234;ncias Bibliogr&#225;ficas</w:t></w:r></w:p>
-<w:p><w:pPr><w:spacing w:after="240"/></w:pPr>
-  <w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr>
-  <w:t></w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="240"/></w:pPr><w:r><w:t></w:t></w:r></w:p>
 ${refXmls}
-<w:sectPr>
-  <w:pgSz w:w="11906" w:h="16838"/>
-  <w:pgMar w:top="1701" w:right="1134" w:bottom="1134" w:left="1701"/>
-</w:sectPr>
-</w:body>
-</w:document>`;
-
-    const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>`;
-
-    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:docDefaults>
-    <w:rPrDefault><w:rPr>
-      <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
-      <w:sz w:val="24"/>
-    </w:rPr></w:rPrDefault>
-  </w:docDefaults>
-</w:styles>`;
-
-    const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-</Types>`;
-
-    const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`;
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1701" w:right="1134" w:bottom="1134" w:left="1701"/></w:sectPr>
+</w:body></w:document>`;
 
     const zip = new JSZip();
-    zip.file('[Content_Types].xml', contentTypes);
-    zip.file('_rels/.rels', rootRels);
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+    zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
     zip.file('word/document.xml', documentXml);
-    zip.file('word/_rels/document.xml.rels', relsXml);
-    zip.file('word/styles.xml', stylesXml);
+    zip.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
 
     const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = 'referencias-abnt.docx';
-    a.click();
+    a.href = url; a.download = 'referencias-abnt.docx'; a.click();
     URL.revokeObjectURL(url);
-
-  } catch(e) {
-    alert('Erro ao gerar Word: ' + e.message);
-  }
-
+  } catch(e) { alert('Erro ao gerar Word: ' + e.message); }
   btn.disabled = false;
   btn.textContent = '⬇ Baixar Word (.docx)';
 }
-
-
 </script>
 </body>
 </html>
