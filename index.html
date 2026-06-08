@@ -111,6 +111,9 @@
       <button class="tab active" onclick="switchTab('auto',this)">🔗 URL</button>
       <button class="tab" onclick="switchTab('doi',this)">🔬 DOI</button>
       <button class="tab" onclick="switchTab('isbn',this)">📚 ISBN</button>
+      <button class="tab" onclick="switchTab('converter',this)">🔄 Converter</button>
+      <button class="tab" onclick="switchTab('verificar',this)">✅ Verificar</button>
+      <button class="tab" onclick="switchTab('organizar',this)">📋 Organizar</button>
       <button class="tab" onclick="switchTab('manual',this)">✏️ Manual</button>
     </div>
 
@@ -157,6 +160,74 @@ https://doi.org/10.1038/s41586-021-03819-2"></textarea>
       <p class="hint">ISBN-10 ou ISBN-13, com ou sem hífens — metadados via Open Library e Google Books.</p>
       <button class="btn-generate" onclick="generateISBN()">
         <span>Gerar referências por ISBN</span>
+      </button>
+    </div>
+
+    <!-- TAB CONVERTER -->
+    <div class="tab-pane" id="pane-converter">
+      <div class="card-title">Converter entre normas bibliográficas</div>
+      <div class="form-grid" style="margin-bottom:10px; grid-template-columns:1fr 1fr; display:grid; gap:10px;">
+        <div class="form-group">
+          <label>Norma de origem</label>
+          <select id="conv-from">
+            <option value="ABNT">ABNT NBR 6023:2025</option>
+            <option value="APA">APA 7ª edição</option>
+            <option value="Vancouver">Vancouver</option>
+            <option value="IEEE">IEEE</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Norma de destino</label>
+          <select id="conv-to">
+            <option value="APA">APA 7ª edição</option>
+            <option value="ABNT">ABNT NBR 6023:2025</option>
+            <option value="Vancouver">Vancouver</option>
+            <option value="IEEE">IEEE</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Cole as referências para converter (uma por linha em branco)</label>
+        <textarea id="conv-input" style="height:180px;" placeholder="Cole aqui as referências na norma de origem. Separe cada referência por uma linha em branco."></textarea>
+      </div>
+      <button class="btn-generate" onclick="convertRefs()">
+        <span>Converter referências</span>
+      </button>
+    </div>
+
+    <!-- TAB VERIFICAR -->
+    <div class="tab-pane" id="pane-verificar">
+      <div class="card-title">Verificar referências ABNT</div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Cole as referências para verificar (uma por linha em branco)</label>
+        <textarea id="verif-input" style="height:200px;" placeholder="Cole aqui as referências que deseja verificar. Separe cada uma por uma linha em branco.
+
+Exemplo:
+SILVA, João. Gestão ambiental. São Paulo: Atlas, 2020.
+
+BRASIL. Lei nº 9.433, de 8 de janeiro de 1997..."></textarea>
+      </div>
+      <button class="btn-generate" onclick="verificarRefs()">
+        <span>Verificar referências</span>
+      </button>
+    </div>
+
+    <!-- TAB ORGANIZAR -->
+    <div class="tab-pane" id="pane-organizar">
+      <div class="card-title">Organizar bibliografia para TCC / Dissertação</div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Cole todas as suas referências (uma por linha em branco)</label>
+        <textarea id="org-input" style="height:200px;" placeholder="Cole aqui todas as referências do seu trabalho. Serão organizadas em ordem alfabética conforme ABNT, duplicatas removidas e formatação padronizada."></textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Ordenação</label>
+        <select id="org-order">
+          <option value="alfabetica">Alfabética (sistema autor-data — ABNT 9.1)</option>
+          <option value="numerica">Numérica (sistema numérico — ABNT 9.2)</option>
+        </select>
+      </div>
+      <button class="btn-generate" onclick="organizarRefs()">
+        <span>Organizar bibliografia</span>
       </button>
     </div>
 
@@ -584,6 +655,161 @@ function formatISBNRef(m, isbn) {
   ref += ` ISBN ${isbn}.`;
 
   return ref;
+}
+
+
+// ── CONVERTER entre normas ───────────────────────────────────────────────────
+async function convertRefs() {
+  const from = document.getElementById('conv-from').value;
+  const to = document.getElementById('conv-to').value;
+  const raw = document.getElementById('conv-input').value.trim();
+  if (!raw) { alert('Cole pelo menos uma referência para converter.'); return; }
+  if (from === to) { alert('Selecione normas diferentes para converter.'); return; }
+
+  const refs = raw.split(/\n\s*\n/).map(r => r.trim()).filter(Boolean);
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  for (const ref of refs) {
+    const div = document.createElement('div');
+    div.className = 'ref-line';
+    div.innerHTML = `<span class="ref-type-tag" style="background:#e8d4ff;color:#5a008a;">🔄 ${from} → ${to}</span><div style="color:var(--muted);font-family:sans-serif;font-size:12px;margin-bottom:5px;font-style:italic;">${ref.substring(0,80)}...</div><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Convertendo...</div>`;
+    output.appendChild(div);
+
+    try {
+      const prompt = `Você é especialista em normas bibliográficas internacionais e brasileiras.
+
+Converta a referência abaixo de ${from} para ${to}.
+
+Referência original (${from}):
+${ref}
+
+Regras:
+- Mantenha todos os dados bibliográficos (autores, título, editora, ano, etc.)
+- Aplique EXATAMENTE a formatação da norma ${to}
+- Se for ABNT: siga a NBR 6023:2025, título em **negrito**
+- Se for APA: 7ª edição, sem negrito
+- Se for Vancouver: numerado, sobrenome + iniciais
+- Se for IEEE: numerado entre colchetes
+
+Responda APENAS com a referência convertida. Sem explicações.`;
+
+      const converted = await callGroqManual(prompt);
+      allRefs.push({url: `(${from}→${to})`, ref: converted, type:'manual', ok:true});
+      div.innerHTML = `<span class="ref-type-tag" style="background:#e8d4ff;color:#5a008a;">🔄 ${from} → ${to}</span>
+        <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">Original: ${ref.substring(0,80)}...</div>
+        <div>${renderRef(converted)}</div>`;
+    } catch(e) {
+      div.innerHTML = `<span class="ref-type-tag" style="background:#e8d4ff;color:#5a008a;">🔄 ${from} → ${to}</span><div class="ref-error">Erro: ${e.message}</div>`;
+    }
+  }
+  updateResultsHeader();
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── VERIFICAR referências ABNT ───────────────────────────────────────────────
+async function verificarRefs() {
+  const raw = document.getElementById('verif-input').value.trim();
+  if (!raw) { alert('Cole pelo menos uma referência para verificar.'); return; }
+
+  const refs = raw.split(/\n\s*\n/).map(r => r.trim()).filter(Boolean);
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  for (const ref of refs) {
+    const div = document.createElement('div');
+    div.className = 'ref-line';
+    div.innerHTML = `<span class="ref-type-tag" style="background:#fff3d4;color:#8a5a00;">✅ Verificando...</span><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Analisando...</div>`;
+    output.appendChild(div);
+
+    try {
+      const prompt = `Você é especialista em ABNT NBR 6023:2025.
+
+Analise a referência bibliográfica abaixo e verifique se está correta conforme a norma.
+
+Referência:
+${ref}
+
+Responda em formato estruturado:
+1. STATUS: ✅ Correta / ⚠️ Com problemas / ❌ Incorreta
+2. PROBLEMAS ENCONTRADOS: liste cada problema (ou "Nenhum" se estiver correta)
+3. REFERÊNCIA CORRIGIDA: versão correta da referência (use **negrito** no título)
+
+Seja objetivo e específico nos problemas.`;
+
+      const resultado = await callGroqManual(prompt);
+      div.innerHTML = `<span class="ref-type-tag" style="background:#fff3d4;color:#8a5a00;">✅ Verificação</span>
+        <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:6px;">${ref.substring(0,100)}...</div>
+        <div style="font-family:sans-serif;font-size:13px;line-height:1.7;white-space:pre-wrap;">${resultado}</div>`;
+    } catch(e) {
+      div.innerHTML = `<span class="ref-type-tag" style="background:#fff3d4;color:#8a5a00;">✅ Verificação</span><div class="ref-error">Erro: ${e.message}</div>`;
+    }
+  }
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── ORGANIZAR bibliografia ───────────────────────────────────────────────────
+async function organizarRefs() {
+  const raw = document.getElementById('org-input').value.trim();
+  const order = document.getElementById('org-order').value;
+  if (!raw) { alert('Cole pelo menos uma referência para organizar.'); return; }
+
+  const refs = raw.split(/\n\s*\n/).map(r => r.trim()).filter(Boolean);
+  if (refs.length < 2) { alert('Cole pelo menos duas referências para organizar.'); return; }
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  const div = document.createElement('div');
+  div.className = 'ref-line';
+  div.innerHTML = `<span class="ref-type-tag" style="background:#d4f0d4;color:#006b10;">📋 Organizando ${refs.length} referências...</span>`;
+  output.appendChild(div);
+
+  try {
+    const sistemaLabel = order === 'alfabetica' ? 'alfabética (seção 9.1)' : 'numérica/ordem de citação (seção 9.2)';
+    const prompt = `Você é especialista em ABNT NBR 6023:2025.
+
+Organize as referências bibliográficas abaixo conforme as regras da norma:
+
+SISTEMA: ${sistemaLabel}
+
+REGRAS:
+${order === 'alfabetica' ? `- Ordenar alfabeticamente pelo primeiro elemento (sobrenome do autor ou título se sem autor)
+- Quando o autor for o mesmo, ordenar pelo título
+- Números antes de letras
+- Ignorar artigos (O, A, Os, As, Um, Uma) no início de títulos sem autor` : 
+`- Numerar sequencialmente conforme ordem de citação no texto
+- Manter a ordem fornecida pelo usuário (que representa a ordem de citação)`}
+- Remover referências duplicadas
+- Padronizar formatação conforme ABNT NBR 6023:2025
+- Título em **negrito**
+
+Referências:
+${refs.map((r,i) => `${i+1}. ${r}`).join('\n\n')}
+
+Responda com a lista organizada, cada referência separada por linha em branco.
+${order === 'numerica' ? 'Inclua o número antes de cada referência: "1 AUTOR..."' : ''}
+Sem explicações adicionais.`;
+
+    const resultado = await callGroqManual(prompt);
+
+    // Parsear resultado e adicionar ao allRefs
+    const refsOrganizadas = resultado.split(/\n\s*\n/).map(r => r.trim()).filter(Boolean);
+    refsOrganizadas.forEach(r => allRefs.push({url:'(organizada)', ref:r, type:'manual', ok:true}));
+
+    div.innerHTML = `<span class="ref-type-tag" style="background:#d4f0d4;color:#006b10;">📋 ${refsOrganizadas.length} referências organizadas</span>
+      <div style="margin-top:8px;">${refsOrganizadas.map(r => `<div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border);">${renderRef(r)}</div>`).join('')}</div>`;
+
+    updateResultsHeader();
+  } catch(e) {
+    div.innerHTML = `<span class="ref-type-tag" style="background:#d4f0d4;color:#006b10;">📋 Organizar</span><div class="ref-error">Erro: ${e.message}</div>`;
+  }
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function switchTab(tab, btn) {
