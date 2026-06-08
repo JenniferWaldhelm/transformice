@@ -115,17 +115,17 @@
 </head>
 <body>
 <div class="container">
- 
+
   <div class="header">
     <div class="brand">Transformice</div>
     <h1>Gerador de Referências Bibliográficas</h1>
     <div class="norm-tag">✓ ABNT NBR 6023:2025 — Terceira edição</div>
   </div>
- 
+
   <div class="card">
     <div class="card-title">Cole as URLs das suas fontes</div>
     <textarea id="url-input" placeholder="Cole uma URL por linha, por exemplo:
- 
+
 https://www.site.gov.br/pagina
 https://www.outro-site.com.br/artigo
 https://exemplo.org/documento"></textarea>
@@ -139,7 +139,7 @@ https://exemplo.org/documento"></textarea>
     </div>
     <div class="progress-label" id="progress-label"></div>
   </div>
- 
+
   <div class="results-card" id="results-card">
     <div class="results-header">
       <div class="results-title" id="results-title">Referências geradas</div>
@@ -150,21 +150,21 @@ https://exemplo.org/documento"></textarea>
     </div>
     <div class="refs-output" id="refs-output"></div>
   </div>
- 
+
   <p class="footer-note">
     Transformice · Referências geradas com IA conforme ABNT NBR 6023:2025 · Verifique sempre os metadados
   </p>
- 
+
 </div>
- 
+
 <script>
-const GROQ_KEY = "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";
+const GROQ_KEY = "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";
 const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
- 
+
 const SYSTEM = `Você é especialista em normas brasileiras de documentação com domínio completo da ABNT NBR 6023:2025 (terceira edição, 21/05/2025).
- 
+
 Gere referências para documentos online conforme seções 6.6, 7.20 e 8.13.
- 
+
 REGRAS:
 1. Pessoa física: SOBRENOME, Nome. (último sobrenome maiúsculo)
 2. Pessoa jurídica: NOME DA ORGANIZAÇÃO EM MAIÚSCULAS conforme aparece no site
@@ -177,14 +177,14 @@ REGRAS:
 9. Local não identificável: [S. l.]
 10. Redes sociais: indicar nome da rede e perfil após a data
 11. Ponto final obrigatório
- 
+
 FORMATO GERAL:
 AUTOR. **Título**: subtítulo. Local: Site, data. Disponível em: URL. Acesso em: [data atual].
- 
+
 Responda APENAS com a referência. Use **negrito** só no título. Sem explicações, sem prefixos.`;
- 
+
 let allRefs = [];
- 
+
 function setLoading(on) {
   document.getElementById('gen-btn').disabled = on;
   document.getElementById('gen-label').textContent = on ? 'Gerando...' : 'Gerar referências';
@@ -192,27 +192,27 @@ function setLoading(on) {
   document.getElementById('progress-wrap').style.display = on ? 'block' : 'none';
   document.getElementById('progress-label').style.display = on ? 'block' : 'none';
 }
- 
+
 function setProgress(done, total) {
   const pct = Math.round((done / total) * 100);
   document.getElementById('progress-bar').style.width = pct + '%';
   document.getElementById('progress-label').textContent = `Processando ${done} de ${total}...`;
 }
- 
+
 async function generateRefs() {
   const raw = document.getElementById('url-input').value;
   const urls = raw.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
   if (!urls.length) { alert('Cole pelo menos uma URL válida.'); return; }
- 
+
   setLoading(true);
   setProgress(0, urls.length);
   allRefs = [];
- 
+
   const resultsCard = document.getElementById('results-card');
   const output = document.getElementById('refs-output');
   resultsCard.style.display = 'block';
   output.innerHTML = '';
- 
+
   for (let i = 0; i < urls.length; i++) {
     const url = urls[i];
     setProgress(i + 1, urls.length);
@@ -231,7 +231,7 @@ async function generateRefs() {
       output.appendChild(div);
     }
   }
- 
+
   const ok = allRefs.filter(r => r.ok).length;
   document.getElementById('results-title').textContent = `${ok} referência${ok !== 1 ? 's' : ''} gerada${ok !== 1 ? 's' : ''}`;
   setLoading(false);
@@ -242,12 +242,12 @@ async function generateRefs() {
   }, 2000);
   resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
- 
+
 async function callGroq(url) {
   const today = new Date();
   const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
   const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
- 
+
   const resp = await fetch(GROQ_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
@@ -261,7 +261,7 @@ async function callGroq(url) {
       ]
     })
   });
- 
+
   if (!resp.ok) {
     const e = await resp.json().catch(() => ({}));
     throw new Error(e.error?.message || `Erro HTTP ${resp.status}`);
@@ -271,15 +271,15 @@ async function callGroq(url) {
   if (!text) throw new Error('Sem resposta da API.');
   return text;
 }
- 
+
 function renderRef(text) {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
- 
+
 function plainRef(text) {
   return text.replace(/\*\*(.+?)\*\*/g, '$1');
 }
- 
+
 function copyAll(btn) {
   const text = allRefs.filter(r => r.ok).map(r => plainRef(r.ref)).join('\n\n');
   navigator.clipboard.writeText(text).then(() => {
@@ -288,17 +288,17 @@ function copyAll(btn) {
     setTimeout(() => { btn.textContent = '⎘ Copiar tudo'; btn.classList.remove('copied'); }, 2500);
   });
 }
- 
- 
+
+
 async function exportWord() {
   const btn = document.getElementById('btn-word');
   btn.disabled = true;
   btn.textContent = 'Gerando Word...';
- 
+
   try {
     const refs = allRefs.filter(r => r.ok);
     if (!refs.length) { alert('Nenhuma referência para exportar.'); return; }
- 
+
     // Gerar parágrafos XML para cada referência
     function refToXml(text) {
       // Separar partes normais e negrito (**texto**)
@@ -313,13 +313,13 @@ async function exportWord() {
       // Parágrafo com hanging indent (ABNT: recuo 1,25cm = 709 twips)
       return `<w:p><w:pPr><w:jc w:val="both"/><w:ind w:left="709" w:hanging="709"/><w:spacing w:line="240" w:lineRule="auto" w:after="240"/></w:pPr>${runs}</w:p>`;
     }
- 
+
     function escXml(s) {
       return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
- 
+
     const refXmls = refs.map(r => refToXml(r.ref)).join('\n');
- 
+
     const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
   xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -338,12 +338,12 @@ ${refXmls}
 </w:sectPr>
 </w:body>
 </w:document>`;
- 
+
     const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
- 
+
     const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:docDefaults>
@@ -353,7 +353,7 @@ ${refXmls}
     </w:rPr></w:rPrDefault>
   </w:docDefaults>
 </w:styles>`;
- 
+
     const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
@@ -361,19 +361,19 @@ ${refXmls}
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
   <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
 </Types>`;
- 
+
     const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>`;
- 
+
     const zip = new JSZip();
     zip.file('[Content_Types].xml', contentTypes);
     zip.file('_rels/.rels', rootRels);
     zip.file('word/document.xml', documentXml);
     zip.file('word/_rels/document.xml.rels', relsXml);
     zip.file('word/styles.xml', stylesXml);
- 
+
     const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -381,16 +381,16 @@ ${refXmls}
     a.download = 'referencias-abnt.docx';
     a.click();
     URL.revokeObjectURL(url);
- 
+
   } catch(e) {
     alert('Erro ao gerar Word: ' + e.message);
   }
- 
+
   btn.disabled = false;
   btn.textContent = '⬇ Baixar Word (.docx)';
 }
- 
- 
+
+
 </script>
 </body>
 </html>
