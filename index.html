@@ -108,8 +108,10 @@
 
   <div class="card">
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('auto',this)">🔗 Por URL (automático)</button>
-      <button class="tab" onclick="switchTab('manual',this)">✏️ Preenchimento manual</button>
+      <button class="tab active" onclick="switchTab('auto',this)">🔗 URL</button>
+      <button class="tab" onclick="switchTab('doi',this)">🔬 DOI</button>
+      <button class="tab" onclick="switchTab('isbn',this)">📚 ISBN</button>
+      <button class="tab" onclick="switchTab('manual',this)">✏️ Manual</button>
     </div>
 
     <!-- TAB AUTO -->
@@ -128,6 +130,34 @@ https://www.bbc.com/portuguese/articles/xyz"></textarea>
       </button>
       <div class="progress-wrap" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
       <div class="progress-label" id="progress-label"></div>
+    </div>
+
+    <!-- TAB DOI -->
+    <div class="tab-pane" id="pane-doi">
+      <div class="card-title">Cole os DOIs das suas fontes</div>
+      <textarea id="doi-input" placeholder="Cole um DOI por linha:
+
+10.1590/s1413-81232013000300003
+10.1016/j.envpol.2020.114321
+https://doi.org/10.1038/s41586-021-03819-2"></textarea>
+      <p class="hint">Aceita DOI com ou sem o prefixo https://doi.org/ — metadados via API Crossref, sem precisar de IA.</p>
+      <button class="btn-generate" onclick="generateDOI()">
+        <span>Gerar referências por DOI</span>
+      </button>
+    </div>
+
+    <!-- TAB ISBN -->
+    <div class="tab-pane" id="pane-isbn">
+      <div class="card-title">Cole os ISBNs dos seus livros</div>
+      <textarea id="isbn-input" placeholder="Cole um ISBN por linha (com ou sem hífens):
+
+978-85-7826-000-0
+9788578260000
+0-306-40615-2"></textarea>
+      <p class="hint">ISBN-10 ou ISBN-13, com ou sem hífens — metadados via Open Library e Google Books.</p>
+      <button class="btn-generate" onclick="generateISBN()">
+        <span>Gerar referências por ISBN</span>
+      </button>
     </div>
 
     <!-- TAB MANUAL -->
@@ -351,6 +381,210 @@ function updateModalForm() {
 
 // Inicializar form manual
 updateManualForm();
+
+
+// ── DOI via Crossref API ─────────────────────────────────────────────────────
+async function generateDOI() {
+  const raw = document.getElementById('doi-input').value;
+  const dois = raw.split('\n').map(d => d.trim()).filter(Boolean).map(d => {
+    return d.replace(/^https?:\/\/doi\.org\//i, '').trim();
+  }).filter(Boolean);
+  if (!dois.length) { alert('Cole pelo menos um DOI válido.'); return; }
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  for (const doi of dois) {
+    const div = document.createElement('div');
+    div.className = 'ref-line';
+    div.innerHTML = `<div class="ref-url-small">DOI: ${doi}</div><span class="ref-type-tag tag-artigo">Artigo científico</span><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Buscando metadados...</div>`;
+    output.appendChild(div);
+
+    try {
+      const meta = await fetchCrossref(doi);
+      const ref = formatDOIRef(meta, doi);
+      allRefs.push({url: `https://doi.org/${doi}`, ref, type:'artigo', ok:true});
+      div.innerHTML = `<div class="ref-url-small">DOI: ${doi}</div><span class="ref-type-tag tag-artigo">Artigo científico</span><div>${renderRef(ref)}</div>`;
+    } catch(e) {
+      allRefs.push({url: doi, ref:'', type:'artigo', ok:false});
+      div.innerHTML = `<div class="ref-url-small">DOI: ${doi}</div><span class="ref-type-tag tag-artigo">Artigo científico</span><div class="ref-error">Erro: ${e.message}</div><button class="btn-fill-manual" onclick="openModal('https://doi.org/${doi}')">✏️ Preencher manualmente</button>`;
+    }
+  }
+  updateResultsHeader();
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function fetchCrossref(doi) {
+  const resp = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`, {
+    headers: {'User-Agent': 'Transformice/1.0 (https://jemartinsw.github.io/transformice)'}
+  });
+  if (!resp.ok) throw new Error(`DOI não encontrado (HTTP ${resp.status})`);
+  const data = await resp.json();
+  return data.message;
+}
+
+function formatDOIRef(m, doi) {
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  // Autores
+  let autores = '';
+  if (m.author && m.author.length) {
+    const formatAuthor = a => {
+      const sobrenome = (a.family || '').toUpperCase();
+      const nome = a.given || '';
+      return sobrenome && nome ? `${sobrenome}, ${nome}` : sobrenome || nome;
+    };
+    if (m.author.length <= 3) {
+      autores = m.author.map(formatAuthor).join('; ') + '.';
+    } else {
+      autores = formatAuthor(m.author[0]) + ' et al.';
+    }
+  }
+
+  // Título
+  const titulo = m.title?.[0] || '';
+
+  // Periódico
+  const periodico = m['container-title']?.[0] || '';
+
+  // Local
+  const local = m['publisher-location'] || '';
+
+  // Volume, número, páginas
+  const volume = m.volume ? `v. ${m.volume}` : '';
+  const numero = m.issue ? `n. ${m.issue}` : '';
+  const paginas = m.page ? `p. ${m.page}` : '';
+
+  // Data
+  let dataRef = '';
+  const dateArr = m.published?.['date-parts']?.[0] || m['published-print']?.['date-parts']?.[0] || m['published-online']?.['date-parts']?.[0];
+  if (dateArr) {
+    const ano = dateArr[0];
+    const mes = dateArr[1] ? months[dateArr[1]-1] : '';
+    dataRef = mes ? `${mes} ${ano}` : `${ano}`;
+  }
+
+  // Montar referência
+  const partes = [local, volume, numero, paginas, dataRef].filter(Boolean).join(', ');
+  let ref = '';
+  if (autores) ref += autores + ' ';
+  ref += titulo + '. ';
+  if (periodico) ref += `**${periodico}**`;
+  if (partes) ref += `, ${partes}`;
+  ref += '.';
+  ref += ` DOI: ${doi}.`;
+  ref += ` Disponível em: https://doi.org/${doi}. Acesso em: ${accessDate}.`;
+
+  return ref;
+}
+
+// ── ISBN via Open Library + Google Books ─────────────────────────────────────
+async function generateISBN() {
+  const raw = document.getElementById('isbn-input').value;
+  const isbns = raw.split('\n').map(s => s.trim().replace(/[^0-9X]/gi,'')).filter(s => s.length >= 10);
+  if (!isbns.length) { alert('Cole pelo menos um ISBN válido.'); return; }
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  for (const isbn of isbns) {
+    const div = document.createElement('div');
+    div.className = 'ref-line';
+    div.innerHTML = `<div class="ref-url-small">ISBN: ${isbn}</div><span class="ref-type-tag tag-livro">Livro</span><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Buscando metadados...</div>`;
+    output.appendChild(div);
+
+    try {
+      const meta = await fetchISBN(isbn);
+      const ref = formatISBNRef(meta, isbn);
+      allRefs.push({url: `ISBN:${isbn}`, ref, type:'livro', ok:true});
+      div.innerHTML = `<div class="ref-url-small">ISBN: ${isbn}</div><span class="ref-type-tag tag-livro">Livro</span><div>${renderRef(ref)}</div>`;
+    } catch(e) {
+      allRefs.push({url: isbn, ref:'', type:'livro', ok:false});
+      div.innerHTML = `<div class="ref-url-small">ISBN: ${isbn}</div><span class="ref-type-tag tag-livro">Livro</span><div class="ref-error">Erro: ${e.message}</div><button class="btn-fill-manual" onclick="openModal('ISBN:${isbn}')">✏️ Preencher manualmente</button>`;
+    }
+  }
+  updateResultsHeader();
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function fetchISBN(isbn) {
+  // Tentar Open Library primeiro
+  try {
+    const resp = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+    const data = await resp.json();
+    const book = data[`ISBN:${isbn}`];
+    if (book && book.title) return { source: 'openlibrary', ...book };
+  } catch(e) {}
+
+  // Fallback: Google Books
+  const resp2 = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+  const data2 = await resp2.json();
+  if (data2.totalItems > 0) {
+    const vol = data2.items[0].volumeInfo;
+    return { source: 'google', ...vol };
+  }
+  throw new Error('ISBN não encontrado nas bases Open Library e Google Books.');
+}
+
+function formatISBNRef(m, isbn) {
+  let autores = '', titulo = '', subtitulo = '', edicao = '', local = '', editora = '', ano = '';
+
+  if (m.source === 'openlibrary') {
+    // Autores
+    if (m.authors?.length) {
+      const formatA = a => {
+        const parts = (a.name || '').split(' ');
+        if (parts.length < 2) return (a.name||'').toUpperCase();
+        const sob = parts[parts.length-1].toUpperCase();
+        const nome = parts.slice(0,-1).join(' ');
+        return `${sob}, ${nome}`;
+      };
+      autores = m.authors.length <= 3
+        ? m.authors.map(formatA).join('; ') + '.'
+        : formatA(m.authors[0]) + ' et al.';
+    }
+    titulo = m.title || '';
+    edicao = m.edition_name ? m.edition_name.replace(/[^0-9]/g,'') : '';
+    local = m.publish_places?.[0]?.name || '';
+    editora = m.publishers?.[0]?.name || '';
+    ano = m.publish_date?.match(/\d{4}/)?.[0] || '';
+  } else {
+    // Google Books
+    if (m.authors?.length) {
+      const formatA = name => {
+        const parts = name.split(' ');
+        if (parts.length < 2) return name.toUpperCase();
+        const sob = parts[parts.length-1].toUpperCase();
+        const nome = parts.slice(0,-1).join(' ');
+        return `${sob}, ${nome}`;
+      };
+      autores = m.authors.length <= 3
+        ? m.authors.map(formatA).join('; ') + '.'
+        : formatA(m.authors[0]) + ' et al.';
+    }
+    titulo = m.title || '';
+    subtitulo = m.subtitle || '';
+    local = m.publishedDate ? '' : '';
+    editora = m.publisher || '';
+    ano = m.publishedDate?.match(/\d{4}/)?.[0] || '';
+  }
+
+  let ref = '';
+  if (autores) ref += autores + ' ';
+  ref += `**${titulo}**`;
+  if (subtitulo) ref += `: ${subtitulo}`;
+  ref += '.';
+  if (edicao) ref += ` ${edicao}. ed.`;
+  const pubPartes = [local||'[S. l.]', editora, ano].filter(Boolean);
+  if (pubPartes.length) ref += ` ${pubPartes.join(': ')}.`;
+  ref += ` ISBN ${isbn}.`;
+
+  return ref;
+}
 
 function switchTab(tab, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
