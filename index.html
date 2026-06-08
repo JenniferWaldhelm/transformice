@@ -349,10 +349,13 @@ const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
 // ── Detecção de tipo ─────────────────────────────────────────────────────────
 function detectType(url) {
   const u = url.toLowerCase();
-  if (/decreto|portaria|resolucao|resolução|instrucao|instrução|medida.provisoria|emenda|legisla[cç]|norma|diario.oficial|jusbrasil|planalto\.gov|camara\.leg|senado\.leg|casa.civil|lexml|atos.normativos|lei[-_\/\s]\d/.test(u)) return 'legislacao';
+  if (/youtube\.com|youtu\.be/.test(u)) return 'video';
+  if (/abnt\.org|iso\.org|iec\.ch|abntcatalogo|norma.abnt|nbr[-_\s]\d|iso[-_\s]\d/.test(u)) return 'norma';
+  if (/decreto|portaria|resolucao|resolução|instrucao|instrução|medida.provisoria|emenda|legisla[cç]|diario.oficial|jusbrasil|planalto\.gov|camara\.leg|senado\.leg|casa.civil|lexml|atos.normativos|lei[-_\/\s]\d/.test(u)) return 'legislacao';
   if (/doi\.org|scielo|pubmed|periodico|revista|journal|repositorio.*artigo/.test(u)) return 'artigo';
   if (/tcc|dissertac|disserta|tese|monografia|trabalho.conclus|bdtd|repositorio|acervo.digital|lume\.ufrgs|dspace|handle/.test(u)) return 'academico';
   if (/books\.google|isbn|editora|livraria/.test(u)) return 'livro';
+  if (/relatorio|plano.diretor|produto|diagnostico|consultoria|geotecn|laudo|estudo/.test(u)) return 'relatorio';
   return 'web';
 }
 
@@ -407,7 +410,19 @@ Elementos OBRIGATÓRIOS:
 3. Local ou [S. l.], data.
 4. Disponível em: URL. Acesso em: data.
 Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
-Responda APENAS com a referência. **negrito** só no título.`
+Responda APENAS com a referência. **negrito** só no título.`,
+
+  norma: `Você é especialista em ABNT NBR 6023:2025.
+Para NORMAS TÉCNICAS (ABNT NBR, ISO, IEC, ASTM, etc.) os elementos OBRIGATÓRIOS são:
+1. NOME COMPLETO DA ORGANIZAÇÃO EM MAIÚSCULAS (ex: ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS.)
+2. **SIGLA NÚMERO**: título completo em minúsculas
+3. Local: cidade sede
+4. Editora: sigla da organização
+5. Ano
+Formato: ORGANIZAÇÃO. **SIGLA NÚMERO**: título em minúsculas. Local: Sigla, ano.
+Exemplo: ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. **ABNT NBR 6023**: informação e documentação — referências — elaboração. Rio de Janeiro: ABNT, 2025.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. **negrito** só na sigla+número.`
 };
 
 const TYPE_LABELS = {
@@ -416,6 +431,9 @@ const TYPE_LABELS = {
   academico:  { label: 'Trab. acadêmico', css: 'tag-tcc' },
   livro:      { label: 'Livro', css: 'tag-livro' },
   web:        { label: 'Página web', css: 'tag-web' },
+  norma:      { label: 'Norma técnica', css: 'tag-artigo' },
+  relatorio:  { label: 'Relatório técnico', css: 'tag-web' },
+  video:      { label: 'Vídeo (YouTube)', css: 'tag-tcc' },
   manual:     { label: 'Manual', css: 'tag-manual' }
 };
 
@@ -492,6 +510,59 @@ function updateModalForm() {
 // Inicializar form manual
 updateManualForm();
 
+
+
+// ── YouTube via Data API v3 ──────────────────────────────────────────────────
+const YOUTUBE_KEY = "AIzaSyAUIE1jFnmxnvCNLhs8wJKB89MadrJNO2k";
+
+function extractVideoId(url) {
+  const patterns = [
+    /[?&]v=([^&#]+)/,
+    /youtu\.be\/([^?&#]+)/,
+    /youtube\.com\/embed\/([^?&#]+)/,
+    /youtube\.com\/shorts\/([^?&#]+)/
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+async function generateYouTubeRef(url) {
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  const videoId = extractVideoId(url);
+  if (!videoId) throw new Error('ID do vídeo não identificado na URL');
+
+  // Buscar via YouTube Data API v3
+  const apiUrl = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=snippet&key=${YOUTUBE_KEY}`;
+  const resp = await fetch(apiUrl);
+  if (!resp.ok) throw new Error(`Erro na YouTube API: HTTP ${resp.status}`);
+
+  const data = await resp.json();
+  if (!data.items || data.items.length === 0) throw new Error('Vídeo não encontrado ou privado');
+
+  const snippet = data.items[0].snippet;
+  const canal = (snippet.channelTitle || 'CANAL NÃO IDENTIFICADO').toUpperCase();
+  const titulo = snippet.title || 'Título não identificado';
+
+  // Formatar data de publicação
+  let dataPub = '[s. d.]';
+  if (snippet.publishedAt) {
+    const d = new Date(snippet.publishedAt);
+    const dia = d.getDate();
+    const mes = months[d.getMonth()];
+    const ano = d.getFullYear();
+    dataPub = `${dia} ${mes} ${ano}`;
+  }
+
+  // Montar referência conforme ABNT NBR 6023:2025, seção 7.13.2
+  const ref = `${canal}. **${titulo}**. [S. l.]: YouTube, ${dataPub}. 1 vídeo online. Disponível em: ${url}. Acesso em: ${accessDate}.`;
+  return ref;
+}
 
 // ── DOI via Crossref API ─────────────────────────────────────────────────────
 async function generateDOI() {
@@ -1084,6 +1155,8 @@ async function generateFromPDF() {
   if (!pdfFileData) { alert('Selecione um arquivo primeiro.'); return; }
 
   const tipoSel = document.getElementById('pdf-tipo').value;
+  // Detectar tipo pelo conteúdo do arquivo para validação
+  let detectedType = tipoSel === 'auto' ? 'web' : tipoSel;
   const btn = document.getElementById('pdf-btn');
   btn.disabled = true;
   document.getElementById('pdf-label').textContent = 'Gerando...';
@@ -1142,6 +1215,17 @@ Responda APENAS com a referência formatada. Sem explicações.`;
   try {
     const ref = await callGroqManual(prompt);
 
+    // Detectar tipo pelo conteúdo gerado
+    if (tipoSel === 'auto') {
+      if (/BRASIL\.|PARANÁ\.|SÃO PAULO|decreto|lei nº|portaria/i.test(ref)) detectedType = 'legislacao';
+      else if (/ABNT NBR|ISO \d|IEC \d|ASSOCIAÇÃO BRASILEIRA/i.test(ref)) detectedType = 'norma';
+      else if (/dissertação|mestrado|doutorado|tcc|trabalho de conclusão/i.test(ref)) detectedType = 'academico';
+      else if (/v\.\s*\d.*n\.\s*\d/i.test(ref)) detectedType = 'artigo';
+      else if (/editora|ed\./i.test(ref) && !/Disponível em/i.test(ref)) detectedType = 'livro';
+      else if (/contrato|produto\s+\d|plano.diretor|consultoria|elaboração|contratante/i.test(ref)) detectedType = 'relatorio';
+      else detectedType = 'web';
+    }
+
     // Verificar se há campos não identificados
     const hasIncomplete = ref.includes('[não identificado]');
 
@@ -1163,11 +1247,7 @@ Responda APENAS com a referência formatada. Sem explicações.`;
         <textarea id="pdf-comp-${Date.now()}" style="width:100%;height:60px;font-size:12px;border:1px solid #e2e6d8;border-radius:6px;padding:6px;font-family:monospace;" placeholder="Ex: URL: https://... | Ementa: Dispõe sobre..."></textarea>
         <button class="btn-fill-manual" style="margin-top:6px;" onclick="completarECorrigir(this, \`${escapedRef}\`, '${missingList}')">🔄 Completar e corrigir</button>`;
     } else {
-      allRefs.push({url: pdfFileData.name, ref, type:'manual', ok:true});
-      div.innerHTML = `<span class="ref-type-tag" style="background:#e8f4ff;color:#00508a;">📄 Arquivo</span>
-        <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
-        <div>${renderRef(ref)}</div>`;
-      updateResultsHeader();
+      await processAndValidate(ref, detectedType, pdfFileData.name, div, pdfFileData.name);
     }
   } catch(e) {
     div.innerHTML = `<span class="ref-type-tag" style="background:#e8f4ff;color:#00508a;">📄 Arquivo</span>
@@ -1225,9 +1305,25 @@ async function generateRefs() {
     const {label, css} = TYPE_LABELS[type];
 
     try {
-      const ref = await callGroq(url, type);
-      allRefs.push({url, ref, type, ok:true});
-      appendRefLine(output, url, label, css, ref, false);
+      let ref;
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'ref-line';
+      output.appendChild(itemDiv);
+
+      if (type === 'video') {
+        // YouTube: buscar metadados reais via oEmbed
+        itemDiv.innerHTML = `<div class="ref-url-small">${url}</div><span class="ref-type-tag tag-tcc">Vídeo (YouTube)</span><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Buscando metadados...</div>`;
+        try {
+          ref = await generateYouTubeRef(url);
+        } catch(e) {
+          // oEmbed falhou — usar IA como fallback
+          ref = await callGroq(url, type);
+        }
+      } else {
+        ref = await callGroq(url, type);
+      }
+
+      await processAndValidate(ref, type, url, itemDiv, url);
     } catch(e) {
       allRefs.push({url, ref:'', type, ok:false});
       appendRefLine(output, url, label, css, null, true, url);
@@ -1404,6 +1500,204 @@ async function callGroqManual(prompt) {
   const text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Sem resposta da API.');
   return text;
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SISTEMA DE VALIDAÇÃO E CORREÇÃO AUTOMÁTICA
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Erros comuns que podem ser corrigidos automaticamente ────────────────────
+function autoCorrect(ref, type) {
+  let r = ref;
+
+  // 1. Corrigir data de acesso em formato ISO (2026-06-08 → 8 jun. 2026)
+  r = r.replace(/Acesso em:\s*(\d{4})-(\d{2})-(\d{2})/g, (_, y, m, d) => {
+    const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+    return `Acesso em: ${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
+  });
+
+  // 2. Corrigir mês por extenso na data de acesso (junho → jun.)
+  const mesesExtenso = {
+    'janeiro':'jan.','fevereiro':'fev.','março':'mar.','abril':'abr.',
+    'maio':'maio','junho':'jun.','julho':'jul.','agosto':'ago.',
+    'setembro':'set.','outubro':'out.','novembro':'nov.','dezembro':'dez.'
+  };
+  r = r.replace(/Acesso em:\s*(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})/gi, (_, d, mes, y) => {
+    const mesLower = mes.toLowerCase();
+    const mesAbrev = mesesExtenso[mesLower] || mes;
+    return `Acesso em: ${d} ${mesAbrev} ${y}`;
+  });
+  r = r.replace(/Acesso em:\s*(\d{1,2})\s+(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(\d{4})/gi, (_, d, mes, y) => {
+    const mesAbrev = mesesExtenso[mes.toLowerCase()] || mes;
+    return `Acesso em: ${d} ${mesAbrev} ${y}`;
+  });
+
+  // 3. Garantir ponto final
+  r = r.trim();
+  if (!r.endsWith('.')) r += '.';
+
+  // 4. Corrigir "Acesso em: 8 jun 2026" → "Acesso em: 8 jun. 2026" (sem ponto)
+  r = r.replace(/Acesso em:\s*(\d{1,2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\s+(\d{4})/gi, (_, d, m, y) => {
+    const ml = m.toLowerCase();
+    const fixed = ml === 'mai' ? 'maio' : ml + '.';
+    return `Acesso em: ${d} ${fixed} ${y}`;
+  });
+
+  // 5. Norma técnica: garantir que título tenha dois pontos separando sigla do título
+  if (type === 'norma') {
+    r = r.replace(/(\*\*[A-Z]+\s+[A-Z]+\s*[\d:]+)\s+([a-z])/g, (_, sigla, resto) => {
+      if (!sigla.includes(':')) return sigla.replace('**','**') + ': ' + resto;
+      return sigla + ' ' + resto;
+    });
+  }
+
+  // 6. Legislação: número sem ponto (Lei 4337 → Lei nº 4.337)
+  if (type === 'legislacao') {
+    r = r.replace(/n[°oº]\s*(\d{4,5})(?!\.)/g, (_, num) => {
+      const formatted = num.replace(/(\d)(\d{3})$/, '$1.$2');
+      return `nº ${formatted}`;
+    });
+    // "N° " → "nº "
+    r = r.replace(/N[°º]\s+/g, 'nº ');
+  }
+
+  return r;
+}
+
+// ── Validar se referência tem elementos mínimos obrigatórios ─────────────────
+function validateRef(ref, type) {
+  const issues = [];
+  const r = ref.replace(/\*\*/g, '');
+
+  switch(type) {
+    case 'legislacao':
+      if (!/^[A-ZÁÉÍÓÚÃÕÂÊÔÇ\s]+[.(]/.test(r)) issues.push('Jurisdição em maiúsculas ausente');
+      if (!/nº\s*\d/.test(r)) issues.push('Número do ato ausente ou mal formatado');
+      if (!/de\s+\d{1,2}\s+de\s+\w+\s+de\s+\d{4}/.test(r)) issues.push('Data completa ausente (dia, mês por extenso, ano)');
+      if (r.split('.').length < 4) issues.push('Ementa provavelmente ausente');
+      break;
+
+    case 'artigo':
+      if (!r.includes(',')) issues.push('Elementos separados por vírgula ausentes');
+      if (!/v\.\s*\d|n\.\s*\d|p\.\s*\d/.test(r)) issues.push('Volume, número ou páginas ausentes');
+      if (!/\d{4}/.test(r)) issues.push('Ano ausente');
+      break;
+
+    case 'academico':
+      if (!/\d{4}/.test(r)) issues.push('Ano ausente');
+      if (!/Tese|Dissertação|Trabalho|Monografia/i.test(r)) issues.push('Tipo do trabalho ausente');
+      if (!/ – /.test(r)) issues.push('Unidade/instituição ausente (separados por –)');
+      break;
+
+    case 'livro':
+      if (!/\d{4}/.test(r)) issues.push('Ano ausente');
+      if (!r.includes(':')) issues.push('Editora ausente');
+      break;
+
+    case 'norma':
+      if (!/ASSOCIA[ÇC]ÃO|INSTITUTO|ORGANIZA[ÇC]ÃO|FUNDA[ÇC]ÃO|ABNT|ISO|IEC/i.test(r))
+        issues.push('Organização normalizadora ausente');
+      if (!r.includes(':')) issues.push('Separador entre sigla e título ausente');
+      if (!/\d{4}/.test(r)) issues.push('Ano ausente');
+      break;
+
+    case 'web':
+      if (!/Disponível em:/i.test(r)) issues.push('URL ausente (Disponível em:)');
+      if (!/Acesso em:/i.test(r)) issues.push('Data de acesso ausente');
+      if (!/\d{4}/.test(r)) issues.push('Ano ausente');
+      break;
+  }
+
+  // Verificações gerais
+  if (r.includes('[não identificado]')) {
+    const campos = r.match(/[\w\s]+\[não identificado\]/g) || [];
+    campos.forEach(c => issues.push(`Campo não identificado: ${c.replace('[não identificado]','').trim()}`));
+  }
+  if (!r.trim().endsWith('.')) issues.push('Ponto final ausente');
+
+  return issues;
+}
+
+// ── Função principal: valida, corrige e decide o que mostrar ─────────────────
+async function processAndValidate(ref, type, urlLabel, outputDiv, fileName) {
+  // Passo 1: correção automática
+  let corrected = autoCorrect(ref, type);
+
+  // Passo 2: validação
+  const issues = validateRef(corrected, type);
+
+  const {label, css} = TYPE_LABELS[type] || TYPE_LABELS.web;
+
+  if (issues.length === 0) {
+    // ✅ Referência válida
+    allRefs.push({url: urlLabel, ref: corrected, type, ok: true});
+    outputDiv.innerHTML = `
+      <div class="ref-url-small">${fileName || urlLabel}</div>
+      <span class="ref-type-tag ${css}">${label}</span>
+      <div>${renderRef(corrected)}</div>`;
+    updateResultsHeader();
+    return true;
+  }
+
+  // ⚠️ Tem problemas — tentar corrigir via IA uma segunda vez
+  const hasNaoIdentificado = corrected.includes('[não identificado]');
+
+  if (!hasNaoIdentificado && issues.length <= 2) {
+    // Tentar autocorreção via IA silenciosamente
+    try {
+      const fixPrompt = `Você é especialista em ABNT NBR 6023:2025.
+
+A referência abaixo foi gerada mas tem os seguintes problemas:
+${issues.map((p,i) => `${i+1}. ${p}`).join('
+')}
+
+Referência com problemas:
+${corrected}
+
+Corrija APENAS os problemas listados mantendo todos os outros dados.
+Use **negrito** no título. Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência corrigida.`;
+
+      outputDiv.innerHTML = `
+        <div class="ref-url-small">${fileName || urlLabel}</div>
+        <span class="ref-type-tag ${css}">${label}</span>
+        <div style="color:var(--muted);font-family:sans-serif;font-size:12px;">Aplicando correção automática...</div>`;
+
+      const fixed = await callGroqManual(fixPrompt);
+      const fixed2 = autoCorrect(fixed, type);
+      const issuesAfter = validateRef(fixed2, type);
+
+      if (issuesAfter.length === 0) {
+        allRefs.push({url: urlLabel, ref: fixed2, type, ok: true});
+        outputDiv.innerHTML = `
+          <div class="ref-url-small">${fileName || urlLabel}</div>
+          <span class="ref-type-tag ${css}">${label}</span>
+          <div style="font-size:10px;color:var(--green);font-family:sans-serif;margin-bottom:3px;">✓ Corrigida automaticamente</div>
+          <div>${renderRef(fixed2)}</div>`;
+        updateResultsHeader();
+        return true;
+      }
+      // Ainda tem problemas — mostrar com aviso
+      corrected = fixed2;
+    } catch(e) {}
+  }
+
+  // Mostrar com aviso de problemas e campo para completar
+  const issuesList = issues.map(i => `<li>${i}</li>`).join('');
+  const escapedRef = corrected.replace(/`/g, "'");
+  outputDiv.innerHTML = `
+    <div class="ref-url-small">${fileName || urlLabel}</div>
+    <span class="ref-type-tag" style="background:#fff0d4;color:#8a5a00;">⚠️ Revisar</span>
+    <div style="margin:6px 0 4px;">${renderRef(corrected)}</div>
+    <details style="margin-top:6px;">
+      <summary style="font-size:11.5px;color:#8a5a00;cursor:pointer;font-family:sans-serif;">⚠️ ${issues.length} problema(s) detectado(s) — clique para ver</summary>
+      <ul style="font-size:12px;color:#8a5a00;font-family:sans-serif;margin:6px 0 8px 16px;line-height:1.7;">${issuesList}</ul>
+      <textarea style="width:100%;height:55px;font-size:12px;border:1px solid #e2e6d8;border-radius:6px;padding:6px;font-family:monospace;" placeholder="Complete os dados faltantes aqui..."></textarea>
+      <button class="btn-fill-manual" style="margin-top:5px;" onclick="completarECorrigir(this, \`${escapedRef}\`, '${issues.join('; ')}')">🔄 Corrigir com os dados informados</button>
+    </details>`;
+
+  return false;
 }
 
 function renderRef(text) {
