@@ -1141,11 +1141,34 @@ Responda APENAS com a referência formatada. Sem explicações.`;
 
   try {
     const ref = await callGroqManual(prompt);
-    allRefs.push({url: pdfFileData.name, ref, type:'manual', ok:true});
-    div.innerHTML = `<span class="ref-type-tag" style="background:#e8f4ff;color:#00508a;">📄 Arquivo</span>
-      <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
-      <div>${renderRef(ref)}</div>`;
-    updateResultsHeader();
+
+    // Verificar se há campos não identificados
+    const hasIncomplete = ref.includes('[não identificado]');
+
+    if (hasIncomplete) {
+      // Identificar quais campos estão faltando
+      const missing = [];
+      if (ref.includes('[não identificado]')) {
+        const matches = ref.match(/[\w\s]+\s*\[não identificado\]/g) || [];
+        matches.forEach(m => missing.push(m.replace('[não identificado]','').trim()));
+      }
+
+      const escapedRef = ref.replace(/`/g,"'");
+      const missingList = missing.length ? missing.join(', ') : 'alguns campos obrigatórios';
+
+      div.innerHTML = `<span class="ref-type-tag" style="background:#fff0d4;color:#8a5a00;">⚠️ Incompleta</span>
+        <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
+        <div style="margin-bottom:8px;">${renderRef(ref)}</div>
+        <div style="font-family:sans-serif;font-size:12px;color:#8a5a00;margin-bottom:8px;">ℹ️ Não foi possível identificar: <strong>${missingList}</strong>. Complete abaixo:</div>
+        <textarea id="pdf-comp-${Date.now()}" style="width:100%;height:60px;font-size:12px;border:1px solid #e2e6d8;border-radius:6px;padding:6px;font-family:monospace;" placeholder="Ex: URL: https://... | Ementa: Dispõe sobre..."></textarea>
+        <button class="btn-fill-manual" style="margin-top:6px;" onclick="completarECorrigir(this, \`${escapedRef}\`, '${missingList}')">🔄 Completar e corrigir</button>`;
+    } else {
+      allRefs.push({url: pdfFileData.name, ref, type:'manual', ok:true});
+      div.innerHTML = `<span class="ref-type-tag" style="background:#e8f4ff;color:#00508a;">📄 Arquivo</span>
+        <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
+        <div>${renderRef(ref)}</div>`;
+      updateResultsHeader();
+    }
   } catch(e) {
     div.innerHTML = `<span class="ref-type-tag" style="background:#e8f4ff;color:#00508a;">📄 Arquivo</span>
       <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
