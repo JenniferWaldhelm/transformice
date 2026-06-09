@@ -880,7 +880,7 @@ Responda APENAS com "CORRIGIDA: [referência]" ou "INCOMPLETA: [dados faltantes]
           <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:6px;">Original: ${ref.substring(0,100)}...</div>
           <div style="font-family:sans-serif;font-size:13px;color:#8a5a00;margin-bottom:8px;">ℹ️ ${faltando}</div>
           <textarea id="comp-${Date.now()}" style="width:100%;height:60px;font-size:12px;border:1px solid #e2e6d8;border-radius:6px;padding:6px;font-family:monospace;" placeholder="Complete os dados faltantes aqui..."></textarea>
-          <button class="btn-fill-manual" style="margin-top:6px;" onclick="completarECorrigir(this, \`${escapedRef}\`, \`${faltando}\`)">🔄 Corrigir com os dados completados</button>`;
+          <button class="btn-fill-manual" style="margin-top:6px;" onclick="(function(btn){const idx=btn.dataset.idx;completarECorrigir(btn,_pendingRefs[idx].ref,_pendingRefs[idx].missing)})(this)" data-idx="${(()=>{const i=_pendingIdx++;_pendingRefs[i]={ref:escapedRef,missing:faltando};return i;})()}">🔄 Corrigir com os dados completados</button>`;
       }
     } catch(e) {
       div.innerHTML = `<span class="ref-type-tag" style="background:#fff3d4;color:#8a5a00;">✅ Verificação</span><div class="ref-error">Erro: ${e.message}</div>`;
@@ -1293,7 +1293,7 @@ Responda APENAS com a referência formatada. Sem explicações.`;
         <div style="margin-bottom:8px;">${renderRef(ref)}</div>
         <div style="font-family:sans-serif;font-size:12px;color:#8a5a00;margin-bottom:8px;">ℹ️ Não foi possível identificar: <strong>${missingList}</strong>. Complete abaixo:</div>
         <textarea id="pdf-comp-${Date.now()}" style="width:100%;height:60px;font-size:12px;border:1px solid #e2e6d8;border-radius:6px;padding:6px;font-family:monospace;" placeholder="Ex: URL: https://... | Ementa: Dispõe sobre..."></textarea>
-        <button class="btn-fill-manual" style="margin-top:6px;" onclick="completarECorrigir(this, \`${escapedRef}\`, '${missingList}')">🔄 Completar e corrigir</button>`;
+        <button class="btn-fill-manual" style="margin-top:6px;" onclick="(function(btn){const idx=btn.dataset.idx;completarECorrigir(btn,_pendingRefs[idx].ref,_pendingRefs[idx].missing)})(this)" data-idx="${(()=>{const i=_pendingIdx++;_pendingRefs[i]={ref:escapedRef,missing:missingList};return i;})()}">🔄 Completar e corrigir</button>`;
     } else {
       await processAndValidate(ref, detectedType, pdfFileData.name, div, pdfFileData.name);
     }
@@ -1317,6 +1317,8 @@ function switchTab(tab, btn) {
 
 // ── Estado global ────────────────────────────────────────────────────────────
 let allRefs = [];
+const _pendingRefs = {};
+let _pendingIdx = 0;
 let modalCallback = null;
 
 function setLoading(on) {
@@ -1697,8 +1699,7 @@ async function processAndValidate(ref, type, urlLabel, outputDiv, fileName) {
       const fixPrompt = `Você é especialista em ABNT NBR 6023:2025.
 
 A referência abaixo foi gerada mas tem os seguintes problemas:
-${issues.map((p,i) => `${i+1}. ${p}`).join('
-')}
+${issues.map((p,i) => (i+1)+'. '+p).join('\n')}
 
 Referência com problemas:
 ${corrected}
@@ -1742,7 +1743,7 @@ Responda APENAS com a referência corrigida.`;
       <summary style="font-size:11.5px;color:#8a5a00;cursor:pointer;font-family:sans-serif;">⚠️ ${issues.length} problema(s) detectado(s) — clique para ver</summary>
       <ul style="font-size:12px;color:#8a5a00;font-family:sans-serif;margin:6px 0 8px 16px;line-height:1.7;">${issuesList}</ul>
       <textarea style="width:100%;height:55px;font-size:12px;border:1px solid #e2e6d8;border-radius:6px;padding:6px;font-family:monospace;" placeholder="Complete os dados faltantes aqui..."></textarea>
-      <button class="btn-fill-manual" style="margin-top:5px;" onclick="completarECorrigir(this, \`${escapedRef}\`, '${issues.join('; ')}')">🔄 Corrigir com os dados informados</button>
+      <button class="btn-fill-manual" style="margin-top:5px;" onclick="(function(btn){const idx=btn.dataset.idx;completarECorrigir(btn,_pendingRefs[idx].ref,_pendingRefs[idx].missing)})(this)" data-idx="${(()=>{const i=_pendingIdx++;_pendingRefs[i]={ref:escapedRef,missing:issues.join('; ')};return i;})()}">🔄 Corrigir com os dados informados</button>
     </details>`;
 
   return false;
