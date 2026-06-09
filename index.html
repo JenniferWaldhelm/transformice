@@ -350,6 +350,11 @@ const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
 function detectType(url) {
   const u = url.toLowerCase();
   if (/youtube\.com|youtu\.be/.test(u)) return 'video';
+  if (/instagram\.com/.test(u)) return 'instagram';
+  if (/facebook\.com|fb\.com/.test(u)) return 'facebook';
+  if (/twitter\.com|x\.com/.test(u)) return 'twitter';
+  if (/linkedin\.com/.test(u)) return 'linkedin';
+  if (/tiktok\.com/.test(u)) return 'tiktok';
   if (/abnt\.org|iso\.org|iec\.ch|abntcatalogo|norma.abnt|nbr[-_\s]\d|iso[-_\s]\d/.test(u)) return 'norma';
   if (/decreto|portaria|resolucao|resolução|instrucao|instrução|medida.provisoria|emenda|legisla[cç]|diario.oficial|jusbrasil|planalto\.gov|camara\.leg|senado\.leg|casa.civil|lexml|atos.normativos|lei[-_\/\s]\d/.test(u)) return 'legislacao';
   if (/doi\.org|scielo|pubmed|periodico|revista|journal|repositorio.*artigo/.test(u)) return 'artigo';
@@ -434,6 +439,11 @@ const TYPE_LABELS = {
   norma:      { label: 'Norma técnica', css: 'tag-artigo' },
   relatorio:  { label: 'Relatório técnico', css: 'tag-web' },
   video:      { label: 'Vídeo (YouTube)', css: 'tag-tcc' },
+  instagram:  { label: 'Instagram', css: 'tag-tcc' },
+  facebook:   { label: 'Facebook', css: 'tag-tcc' },
+  twitter:    { label: 'Twitter/X', css: 'tag-tcc' },
+  linkedin:   { label: 'LinkedIn', css: 'tag-tcc' },
+  tiktok:     { label: 'TikTok', css: 'tag-tcc' },
   manual:     { label: 'Manual', css: 'tag-manual' }
 };
 
@@ -511,6 +521,63 @@ function updateModalForm() {
 updateManualForm();
 
 
+
+
+// ── Referência de rede social com formulário manual ──────────────────────────
+async function gerarRefRedeSocial(btn, url, rede, ts) {
+  const autor  = document.getElementById(`soc-autor-${ts}`)?.value.trim();
+  const perfil = document.getElementById(`soc-perfil-${ts}`)?.value.trim();
+  const titulo = document.getElementById(`soc-titulo-${ts}`)?.value.trim();
+  const data   = document.getElementById(`soc-data-${ts}`)?.value.trim();
+  const local  = document.getElementById(`soc-local-${ts}`)?.value.trim() || '[S. l.]';
+
+  if (!autor || !titulo) {
+    alert('Preencha pelo menos o Autor e o Texto/título do post.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Gerando...';
+
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  // Formatar data de publicação com mês abreviado
+  let dataFormatada = data || '[s. d.]';
+  if (data) {
+    const mesesExtenso = {
+      'janeiro':'jan.','fevereiro':'fev.','março':'mar.','abril':'abr.',
+      'maio':'maio','junho':'jun.','julho':'jul.','agosto':'ago.',
+      'setembro':'set.','outubro':'out.','novembro':'nov.','dezembro':'dez.'
+    };
+    // Converter "13 de maio de 2025" → "13 maio 2025" ou "13 maio 2025" → ok
+    dataFormatada = data
+      .replace(/\s+de\s+/gi, ' ')
+      .replace(/(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/gi,
+        m => mesesExtenso[m.toLowerCase()] || m);
+  }
+
+  const autorMaiusc = autor.toUpperCase();
+  const perfilStr = perfil ? `${rede}: ${perfil}. ` : '';
+
+  // Montar referência conforme ABNT NBR 6023:2025, seção 8.7.3
+  const ref = `${autorMaiusc}. **${titulo}**. ${local}, ${dataFormatada}. ${perfilStr}Disponível em: ${url}. Acesso em: ${accessDate}.`;
+
+  const container = btn.closest('.ref-line');
+
+  // Atualizar o allRefs
+  const idx = allRefs.findIndex(r => r.url === url && !r.ok);
+  if (idx !== -1) { allRefs[idx].ref = ref; allRefs[idx].ok = true; }
+  else allRefs.push({url, ref, type: rede.toLowerCase(), ok: true});
+
+  container.innerHTML = `
+    <div class="ref-url-small">${url}</div>
+    <span class="ref-type-tag tag-tcc">${rede}</span>
+    <div>${renderRef(ref)}</div>`;
+
+  updateResultsHeader();
+}
 
 // ── YouTube via Data API v3 ──────────────────────────────────────────────────
 const YOUTUBE_KEY = "AIzaSyAUIE1jFnmxnvCNLhs8wJKB89MadrJNO2k";
@@ -1359,6 +1426,61 @@ async function generateRefs() {
       const itemDiv = document.createElement('div');
       itemDiv.className = 'ref-line';
       output.appendChild(itemDiv);
+
+      // Redes sociais bloqueiam extração automática — abrir formulário manual
+      const SOCIAL_NETWORKS = {
+        instagram: { nome: 'Instagram', campo: 'Instagram' },
+        facebook:  { nome: 'Facebook',  campo: 'Facebook'  },
+        twitter:   { nome: 'Twitter/X', campo: 'Twitter'   },
+        linkedin:  { nome: 'LinkedIn',  campo: 'LinkedIn'  },
+        tiktok:    { nome: 'TikTok',    campo: 'TikTok'    },
+      };
+
+      if (SOCIAL_NETWORKS[type]) {
+        const net = SOCIAL_NETWORKS[type];
+        const ts = Date.now();
+        itemDiv.innerHTML = `
+          <div class="ref-url-small">${url}</div>
+          <span class="ref-type-tag tag-tcc">${net.nome}</span>
+          <div style="font-family:sans-serif;font-size:12px;color:#5a008a;margin:6px 0 10px;">
+            ℹ️ O ${net.nome} bloqueia extração automática. Preencha os dados do post:
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div class="form-group">
+              <label>Autor / Perfil institucional</label>
+              <span class="tip">Nome da pessoa ou organização que publicou</span>
+              <input type="text" id="soc-autor-${ts}" placeholder="Ex: PREFEITURA MUNICIPAL DE IBIPORÃ" />
+            </div>
+            <div class="form-group">
+              <label>Nome do perfil (@)</label>
+              <span class="tip">Ex: prefeituromunicipaldeibipora</span>
+              <input type="text" id="soc-perfil-${ts}" placeholder="Ex: prefeituromunicipaldeibipora" />
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Texto / título do post</label>
+            <span class="tip">Primeiras palavras ou título do conteúdo</span>
+            <input type="text" id="soc-titulo-${ts}" placeholder="Ex: Alô, Ibiporãaa! O clima mais esperado do ano já tá chegando!" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div class="form-group">
+              <label>Data de publicação</label>
+              <span class="tip">Ex: 13 maio 2025</span>
+              <input type="text" id="soc-data-${ts}" placeholder="Ex: 13 maio 2025" />
+            </div>
+            <div class="form-group">
+              <label>Local (cidade/país)</label>
+              <span class="tip">Deixe em branco para [S. l.]</span>
+              <input type="text" id="soc-local-${ts}" placeholder="Ex: Ibiporã" />
+            </div>
+          </div>
+          <button class="btn-fill-manual" style="font-size:13px;padding:6px 14px;"
+            onclick="gerarRefRedeSocial(this, '${url}', '${net.campo}', ${ts})">
+            ✓ Gerar referência
+          </button>`;
+        allRefs.push({url, ref:'', type, ok:false});
+        continue;
+      }
 
       if (type === 'video') {
         // YouTube: buscar metadados reais via oEmbed
