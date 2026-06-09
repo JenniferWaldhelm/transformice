@@ -950,6 +950,54 @@ Sem explicações adicionais.`;
 }
 
 
+
+// ── Completar referência com campos específicos preenchidos pelo usuário ──────
+async function completarComCampos(btn, refOriginal, ts, numFields) {
+  const dados = [];
+  for (let i = 0; i < numFields; i++) {
+    const el = document.getElementById(`field-${ts}-${i}`);
+    if (el && el.value.trim()) {
+      const label = el.closest('div').previousElementSibling?.previousElementSibling?.textContent || '';
+      dados.push(`${label}: ${el.value.trim()}`);
+    }
+  }
+
+  if (!dados.length) { alert('Preencha pelo menos um campo antes de continuar.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Gerando...';
+
+  const prompt = `Você é especialista em ABNT NBR 6023:2025.
+
+Complete e corrija a referência bibliográfica abaixo com os dados fornecidos pelo usuário.
+
+Referência incompleta:
+${refOriginal}
+
+Dados fornecidos pelo usuário:
+${dados.join('\n')}
+
+Substitua todos os [dado não identificado] pelos valores corretos fornecidos.
+Formate conforme ABNT NBR 6023:2025. Use **negrito** no título.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez. Ponto final obrigatório.
+Responda APENAS com a referência completa e corrigida. Sem explicações.`;
+
+  try {
+    const refCompleta = await callGroqManual(prompt);
+    const container = btn.closest('.ref-line');
+    const autoFixed = autoCorrect(refCompleta, 'web');
+    allRefs.push({url: '(completada)', ref: autoFixed, type:'manual', ok:true});
+    container.innerHTML = `
+      <span class="ref-type-tag" style="background:#d4ffd8;color:#006b10;">✅ Referência completa</span>
+      <div>${renderRef(autoFixed)}</div>`;
+    updateResultsHeader();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🔄 Gerar referência completa';
+    alert('Erro: ' + e.message);
+  }
+}
+
 // ── Completar e corrigir referência incompleta ───────────────────────────────
 async function completarECorrigir(btn, refOriginal, faltando) {
   const textarea = btn.previousElementSibling;
