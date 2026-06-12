@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <!-- Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-SY20JHS5Q4"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-SY20JHS5Q4');
-</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Transformice — Gerador de Referências ABNT</title>
+<title>Gerador de Referências ABNT NBR 6023:2025 | Transformice</title>
+<meta name="description" content="Formate suas referências bibliográficas na norma ABNT NBR 6023:2025 de forma automática e gratuita. Cole o DOI ou link e monte sua lista para o TCC.">
+<meta name="keywords" content="referências ABNT, NBR 6023, gerador de referências, TCC, bibliografia, ABNT 2025, referência bibliográfica automática">
+<meta name="author" content="Transformice">
+<meta property="og:title" content="Gerador de Referências ABNT NBR 6023:2025 | Transformice">
+<meta property="og:description" content="Formate suas referências bibliográficas na norma ABNT NBR 6023:2025 de forma automática e gratuita. Cole o DOI ou link e monte sua lista para o TCC.">
+<meta property="og:type" content="website">
+<meta name="robots" content="index, follow">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HWM13D0G17"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -351,13 +350,14 @@ BRASIL. Lei nº 9.433, de 8 de janeiro de 1997..."></textarea>
 </div>
 
 <script>
-const GROQ_KEY = "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";
-const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
+const GEMINI_KEY = "AQ.Ab8RN6JNYJNsW5zcudmdArvYuIeBW7ilt44MYJoQCuGdODUj5A";
+const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 // ── Detecção de tipo ─────────────────────────────────────────────────────────
 function detectType(url) {
   const u = url.toLowerCase();
   if (/youtube\.com|youtu\.be/.test(u)) return 'video';
+  if (/news\.google\.com|google\.com\/url|bit\.ly|tinyurl\.com|t\.co\//.test(u)) return 'redirect';
   if (/instagram\.com/.test(u)) return 'instagram';
   if (/facebook\.com|fb\.com/.test(u)) return 'facebook';
   if (/twitter\.com|x\.com/.test(u)) return 'twitter';
@@ -447,6 +447,7 @@ const TYPE_LABELS = {
   norma:      { label: 'Norma técnica', css: 'tag-artigo' },
   relatorio:  { label: 'Relatório técnico', css: 'tag-web' },
   video:      { label: 'Vídeo (YouTube)', css: 'tag-tcc' },
+  redirect:   { label: 'Link de redirecionamento', css: 'tag-lei' },
   instagram:  { label: 'Instagram', css: 'tag-tcc' },
   facebook:   { label: 'Facebook', css: 'tag-tcc' },
   twitter:    { label: 'Twitter/X', css: 'tag-tcc' },
@@ -530,6 +531,43 @@ updateManualForm();
 
 
 
+
+
+// ── Gerar referência a partir de URL original (após redirecionador) ──────────
+async function gerarDeRedirect(btn, ts) {
+  const newUrl = document.getElementById(`redir-url-${ts}`)?.value.trim();
+  if (!newUrl || !newUrl.startsWith('http')) {
+    alert('Cole uma URL válida começando com http://  ou https://');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Gerando...';
+
+  const container = btn.closest('.ref-line');
+  const type = detectType(newUrl);
+  const {label, css} = TYPE_LABELS[type] || TYPE_LABELS.web;
+
+  container.innerHTML = `
+    <div class="ref-url-small">${newUrl}</div>
+    <span class="ref-type-tag ${css}">${label}</span>
+    <div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Gerando referência...</div>`;
+
+  try {
+    let ref;
+    if (type === 'video') {
+      ref = await generateYouTubeRef(newUrl);
+    } else {
+      ref = await callGroq(newUrl, type);
+    }
+    await processAndValidate(ref, type, newUrl, container, newUrl);
+  } catch(e) {
+    container.innerHTML = `
+      <div class="ref-url-small">${newUrl}</div>
+      <span class="ref-type-tag ${css}">${label}</span>
+      <div class="ref-error">Erro: ${e.message}</div>`;
+  }
+}
 
 // ── Referência de rede social com formulário manual ──────────────────────────
 async function gerarRefRedeSocial(btn, url, rede, ts) {
@@ -1435,6 +1473,31 @@ async function generateRefs() {
       itemDiv.className = 'ref-line';
       output.appendChild(itemDiv);
 
+      // Links de redirecionamento — avisar e pedir URL original
+      if (type === 'redirect') {
+        const isGoogleNews = url.includes('news.google.com');
+        const msg = isGoogleNews
+          ? 'Esta é uma URL do Google News (redirecionador). Cole a URL da notícia original para gerar a referência correta.'
+          : 'Esta URL é um redirecionador (bit.ly, t.co, etc.). Cole a URL final do conteúdo para gerar a referência correta.';
+        const ts = Date.now();
+        itemDiv.innerHTML = `
+          <div class="ref-url-small">${url}</div>
+          <span class="ref-type-tag tag-lei">⚠️ Link de redirecionamento</span>
+          <div style="font-family:sans-serif;font-size:13px;color:#8a5a00;margin:8px 0 10px;">
+            ℹ️ ${msg}
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Cole a URL original da notícia/conteúdo</label>
+            <input type="url" id="redir-url-${ts}" placeholder="https://g1.globo.com/..." style="width:100%;" />
+          </div>
+          <button class="btn-fill-manual" style="font-size:13px;padding:6px 14px;"
+            onclick="gerarDeRedirect(this, ${ts})">
+            🔄 Gerar referência com a URL correta
+          </button>`;
+        allRefs.push({url, ref:'', type:'redirect', ok:false});
+        continue;
+      }
+
       // Redes sociais bloqueiam extração automática — abrir formulário manual
       const SOCIAL_NETWORKS = {
         instagram: { nome: 'Instagram', campo: 'Instagram' },
@@ -1648,31 +1711,29 @@ async function callGroq(url, type) {
   const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
   const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
 
-  const resp = await fetch(GROQ_API, {
+  const prompt2 = `${PROMPTS[type]}\n\nURL: ${url}\nData de acesso: ${accessDate}\nGere a referência conforme ABNT NBR 6023:2025. Responda apenas com a referência formatada.`;
+  const resp = await fetch(`${GEMINI_API}?key=${GEMINI_KEY}`, {
     method: 'POST',
-    headers: {'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile', temperature: 0.1, max_tokens: 600,
-      messages: [
-        {role:'system', content: PROMPTS[type]},
-        {role:'user', content:`URL: ${url}\nData de acesso: ${accessDate}\nGere a referência conforme ABNT NBR 6023:2025. Responda apenas com a referência formatada.`}
-      ]
+      contents: [{parts: [{text: prompt2}]}],
+      generationConfig: {temperature: 0.1, maxOutputTokens: 600}
     })
   });
   if (!resp.ok) { const e = await resp.json().catch(()=>{}); throw new Error(e?.error?.message||`Erro HTTP ${resp.status}`); }
   const data = await resp.json();
-  const text = data.choices?.[0]?.message?.content?.trim();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
   if (!text) throw new Error('Sem resposta da API.');
   return text;
 }
 
 async function callGroqManual(prompt) {
-  const resp = await fetch(GROQ_API, {
+  const resp = await fetch(`${GEMINI_API}?key=${GEMINI_KEY}`, {
     method: 'POST',
-    headers: {'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile', temperature: 0.1, max_tokens: 600,
-      messages: [{role:'user', content: prompt}]
+      contents: [{parts: [{text: prompt}]}],
+      generationConfig: {temperature: 0.1, maxOutputTokens: 600}
     })
   });
   if (!resp.ok) { const e = await resp.json().catch(()=>{}); throw new Error(e?.error?.message||`Erro HTTP ${resp.status}`); }
