@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Como Gerar Referências ABNT em Segundos (NBR 6023:2025) | Transformice</title>
+<meta name="description" content="Gere referências bibliográficas na norma ABNT NBR 6023:2025 de forma rápida. Ferramenta online e gratuita para formatar seu TCC ou artigo acadêmico.">
+<meta name="robots" content="index, follow">
+<meta property="og:title" content="Como Gerar Referências ABNT em Segundos (NBR 6023:2025)">
+<meta property="og:description" content="Gere referências bibliográficas na norma ABNT NBR 6023:2025 de forma rápida. Ferramenta online e gratuita para formatar seu TCC ou artigo acadêmico.">
+<meta property="og:type" content="article">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HWM13D0G17"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag("js", new Date());
+  gtag("config", "G-HWM13D0G17");
+</script>
+<style>
+  :root {
+    --olive: #6c8b2d;
+    --green: #7aa91a;
+    --dark-olive: #606d3d;
+    --dark: #525050;
+    --bg: #f7f8f4;
+    --white: #ffffff;
+    --border: #e2e6d8;
+    --text: #2d3020;
+    --muted: #7a7f6a;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.75; }
+
+  /* NAV */
+  nav {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .nav-brand { font-size: 1.2rem; font-weight: 800; color: var(--olive); text-decoration: none; letter-spacing: -0.02em; }
+  .nav-links { display: flex; gap: 1.5rem; list-style: none; }
+  .nav-links a { font-size: 13.5px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  .nav-links a:hover, .nav-links a.active { color: var(--olive); font-weight: 600; }
+  .nav-cta { background: var(--olive); color: white !important; padding: 6px 14px; border-radius: 6px; font-weight: 600 !important; }
+  .nav-cta:hover { background: var(--dark-olive) !important; }
+
+  /* HERO DO POST */
+  .post-hero {
+    background: linear-gradient(135deg, #eaf0db 0%, #f7f8f4 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 3rem 1.5rem 2.5rem;
+  }
+  .post-hero-inner { max-width: 760px; margin: 0 auto; }
+  .post-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .post-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dark-olive); background: #d4e4a8; padding: 3px 10px; border-radius: 20px; }
+  .post-date { font-size: 12.5px; color: var(--muted); }
+  .post-hero h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 800; color: var(--dark); line-height: 1.2; margin-bottom: 1rem; }
+  .post-hero .lead { font-size: 1.05rem; color: var(--muted); max-width: 640px; line-height: 1.7; }
+
+  /* LAYOUT */
+  .post-layout { max-width: 760px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+
+  /* ARTICLE */
+  article { font-size: 15px; }
+  article p { margin-bottom: 1.25rem; color: var(--text); }
+  article h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border);
+  }
+  article h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--dark-olive);
+    margin: 1.75rem 0 0.75rem;
+  }
+  article ul, article ol { padding-left: 1.5rem; margin-bottom: 1.25rem; }
+  article li { margin-bottom: 0.5rem; color: var(--text); }
+  article strong { color: var(--dark); }
+  article a { color: var(--olive); text-decoration: none; }
+  article a:hover { text-decoration: underline; }
+
+  /* DESTAQUE PASSO A PASSO */
+  .steps {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    counter-reset: step;
+  }
+  .step {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+  }
+  .step:last-child { margin-bottom: 0; }
+  .step-num {
+    width: 28px;
+    height: 28px;
+    background: var(--olive);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-text { font-size: 14.5px; color: var(--text); line-height: 1.6; }
+  .step-text strong { color: var(--dark); }
+
+  /* EXEMPLO DE REFERÊNCIA */
+  .ref-example {
+    background: #f7f8f4;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--olive);
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+    margin: 1rem 0;
+    font-family: Georgia, serif;
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: var(--text);
+  }
+
+  /* HIGHLIGHT BOX */
+  .highlight-box {
+    background: #eaf0db;
+    border: 1px solid #c8dda8;
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+    font-size: 14px;
+  }
+  .highlight-box strong { color: var(--dark-olive); }
+
+  /* TABELA VANTAGENS */
+  .benefits {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 1.5rem 0;
+  }
+  .benefit-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+  }
+  .benefit-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .benefit-title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+  .benefit-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* CTA */
+  .cta-box {
+    background: linear-gradient(135deg, #eaf0db, #f7f8f4);
+    border: 1px solid #c8dda8;
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-align: center;
+    margin: 2.5rem 0;
+  }
+  .cta-box h2 { font-size: 1.25rem; font-weight: 700; color: var(--dark); margin-bottom: 0.5rem; border: none; padding: 0; margin-top: 0; }
+  .cta-box p { font-size: 14px; color: var(--muted); margin-bottom: 1.25rem; }
+  .btn-cta { display: inline-block; background: var(--olive); color: white; padding: 11px 28px; border-radius: 7px; font-size: 14.5px; font-weight: 700; text-decoration: none; transition: background 0.15s; }
+  .btn-cta:hover { background: var(--dark-olive); }
+
+  /* FOOTER */
+  footer { text-align: center; padding: 2rem; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+  footer a { color: var(--olive); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="/">Transformice</a>
+  <ul class="nav-links">
+    <li><a href="/">Gerador</a></li>
+    <li><a href="/faq.html">FAQ</a></li>
+    <li><a href="/blog/" class="active">Blog</a></li>
+    <li><a href="/" class="nav-cta">Gerar referência</a></li>
+  </ul>
+</nav>
+
+<div class="post-hero">
+  <div class="post-hero-inner">
+    <div class="post-meta">
+      <span class="post-tag">Guia prático</span>
+      <span class="post-date">Junho de 2025 · 8 min de leitura</span>
+    </div>
+    <h1>Como gerar referências ABNT em segundos (NBR 6023:2025 atualizada)</h1>
+    <p class="lead">Você passou meses pesquisando e escrevendo seu TCC. Na reta final, surge o pesadelo: formatar dezenas de referências bibliográficas. Saiba como resolver isso em poucos cliques.</p>
+  </div>
+</div>
+
+<div class="post-layout">
+<article>
+
+<p>Lidar com regras complexas de pontuação, decidir o que fica em itálico ou em negrito, descobrir a ordem exata de autores e organizar os links de internet manualmente consome um tempo precioso. Um único ponto final no lugar errado ou uma data esquecida podem ser motivo para a banca de avaliação descontar pontos valiosos do seu trabalho.</p>
+
+<p>Para evitar esse estresse e garantir que seu projeto siga a versão mais recente da norma, você não precisa passar noites em claro decorando manuais de normalização. O <a href="https://transformice.net.br">Transformice</a> é uma ferramenta gratuita e prática que resolve esse problema para você, gerando suas referências formatadas em poucos cliques.</p>
+
+<h2>O que é a norma ABNT NBR 6023 e por que ela atualizou?</h2>
+
+<p>A ABNT NBR 6023 é a norma técnica que dita todas as regras para a elaboração de referências no Brasil. Ela define desde como citar um livro clássico até a maneira de referenciar um post de rede social ou um documento eletrônico.</p>
+
+<p>As normas precisam mudar de tempos em tempos para acompanhar a evolução da nossa forma de produzir e consumir conhecimento. Hoje em dia, as pesquisas científicas usam muito mais do que livros impressos: citamos vídeos, podcasts, publicações em redes sociais e até interações com inteligência artificial.</p>
+
+<div class="highlight-box">
+  <strong>⚠️ Atenção:</strong> Muitos estudantes acabam usando guias antigos em PDF que circulam pela internet ou salvam modelos desatualizados de blogs acadêmicos. O problema é que a banca examinadora costuma exigir rigor metodológico atualizado. Ao utilizar o Transformice, você garante que suas fontes de pesquisa estarão organizadas de acordo com a <strong>NBR 6023:2025</strong>, a versão vigente.
+</div>
+
+<h2>Como gerar referências automaticamente com o Transformice</h2>
+
+<p>A forma mais rápida de formatar sua bibliografia é automatizando o processo. O Transformice foi construído para que você não precise digitar campo por campo se já tiver o identificador da sua fonte de pesquisa.</p>
+
+<p>Veja como é simples criar uma referência de artigo online com DOI ABNT:</p>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-text"><strong>Copie o identificador</strong> — encontre o DOI do artigo científico ou a URL do site de pesquisa.</div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-text"><strong>Insira no Transformice</strong> — acesse <a href="https://transformice.net.br">transformice.net.br</a> e cole o link ou o código DOI no campo de busca.</div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-text"><strong>Gere e copie</strong> — clique em "Gerar". A ferramenta busca as informações nos bancos de dados e exibe a referência pronta, com itálicos, pontos e maiúsculas nos locais corretos.</div>
+  </div>
+</div>
+
+<p>O uso do DOI é o caminho mais recomendado porque ele puxa os metadados do artigo de forma direta, reduzindo a chance de erros e poupando você de preencher nomes de autores ou títulos longos manualmente.</p>
+
+<h2>Guia prático: como formatar as referências mais difíceis da ABNT</h2>
+
+<p>Algumas fontes de pesquisa costumam gerar muitas dúvidas na hora da formatação. Separamos abaixo as regras práticas para os casos mais comuns.</p>
+
+<h3>Como citar site sem autor na ABNT</h3>
+
+<p>Quando o artigo de um site não indica o nome do autor, a ABNT determina que a entrada da referência seja feita pelo próprio título da página, com a primeira palavra em letras maiúsculas.</p>
+
+<div class="ref-example">COMO fazer referência ABNT. <strong>Portal Acadêmico</strong>, São Paulo, 10 mar. 2024. Disponível em: https://exemplo.com. Acesso em: 8 jun. 2026.</div>
+
+<h3>Como fazer referência de lei na ABNT em 2025</h3>
+
+<p>Leis, decretos e resoluções exigem uma ordem específica. A referência começa pela jurisdição (país, estado ou município), seguida pelo tipo e número da lei, data e dados de publicação.</p>
+
+<div class="ref-example">BRASIL. Lei nº 9.433, de 8 de janeiro de 1997. Institui a Política Nacional de Recursos Hídricos. Brasília, DF: Presidência da República, 1997. Disponível em: https://planalto.gov.br. Acesso em: 8 jun. 2026.</div>
+
+<h3>Como citar vídeo do YouTube na ABNT</h3>
+
+<p>O autor da referência é o canal ou criador do conteúdo. Em seguida, inserem-se o título do vídeo em negrito, a plataforma, o ano de publicação, o link e a data de consulta.</p>
+
+<div class="ref-example">CANAL FUTURA. <strong>Educação ambiental nas escolas</strong>. [S. l.]: YouTube, 15 mar. 2021. 1 vídeo online (12 min). Disponível em: https://youtube.com/watch?v=xxx. Acesso em: 8 jun. 2026.</div>
+
+<h3>Como citar ChatGPT em trabalho acadêmico ABNT</h3>
+
+<p>A indicação é tratar assistentes de IA como documentos eletrônicos. Menciona-se a desenvolvedora, o nome do modelo, a data da interação e a descrição do prompt utilizado.</p>
+
+<div class="ref-example">OPENAI. <strong>ChatGPT</strong> [Large language model]. Prompt: Quais são as principais causas do desmatamento no Brasil? São Paulo, 5 jun. 2025. Disponível em: https://chat.openai.com. Acesso em: 8 jun. 2026.</div>
+
+<h3>Como fazer referência de tese de doutorado ou dissertação</h3>
+
+<p>Além do autor e título, você precisa indicar o tipo do trabalho, o grau, a área de concentração, a instituição, a cidade e o ano de defesa.</p>
+
+<div class="ref-example">RODRIGUES, Ana Lúcia. <strong>Impacto de programas de exercícios no local de trabalho</strong>. 2009. Dissertação (Mestrado em Fisiopatologia Experimental) – Faculdade de Medicina, Universidade de São Paulo, São Paulo, 2009.</div>
+
+<h3>Como referenciar post de Instagram na ABNT</h3>
+
+<p>O autor é o nome do perfil, seguido do título da publicação (ou das primeiras palavras da legenda), o ano, a plataforma e o link.</p>
+
+<div class="ref-example">PREFEITURA MUNICIPAL DE IBIPORÃ. <strong>Alô, Ibiporãaa! O clima mais esperado do ano já tá chegando!</strong> Ibiporã, 13 maio 2025. Instagram: prefeituromunicipaldeibipora. Disponível em: https://www.instagram.com/p/xxx. Acesso em: 8 jun. 2026.</div>
+
+<h3>Como formatar referência de livro com três autores</h3>
+
+<p>Quando o livro tem até três autores, todos devem ser listados. Os nomes são separados por ponto e vírgula, no formato Sobrenome em maiúsculas seguido do prenome.</p>
+
+<div class="ref-example">SOUZA, J. C.; PEREIRA, A. M.; CHAVES, M. <strong>Metodologia de trabalho</strong>. 3. ed. São Paulo: Estrela, 2011.</div>
+
+<h3>Como fazer referência de matéria de jornal online</h3>
+
+<p>Insira o autor (se houver), o título da matéria, o nome do jornal em negrito, o local, a data, o link de acesso e a data de consulta.</p>
+
+<div class="ref-example">OTTA, Lu Aiko. Parcela do tesouro cresce 566% em oito anos. <strong>O Estado de S. Paulo</strong>, São Paulo, ano 131, n. 42656, 1 ago. 2010. Economia & Negócios, p. B1. Disponível em: https://estadao.com.br. Acesso em: 8 jun. 2026.</div>
+
+<h2>Por que usar um gerador de referências em vez de fazer manualmente?</h2>
+
+<div class="benefits">
+  <div class="benefit-card">
+    <div class="benefit-icon">🎯</div>
+    <div class="benefit-title">Precisão técnica</div>
+    <div class="benefit-desc">O risco de esquecer itálicos ou confundir a ordem de pontuação diminui drasticamente. O gerador segue a lógica exata da NBR 6023:2025.</div>
+  </div>
+  <div class="benefit-card">
+    <div class="benefit-icon">⏱️</div>
+    <div class="benefit-title">Economia de tempo</div>
+    <div class="benefit-desc">Em vez de gastar horas procurando regras no final do semestre, você formata suas fontes à medida que escreve o texto.</div>
+  </div>
+  <div class="benefit-card">
+    <div class="benefit-icon">📝</div>
+    <div class="benefit-title">Foco no conteúdo</div>
+    <div class="benefit-desc">Deixe a parte burocrática da formatação para a automação e concentre seus esforços na qualidade teórica do seu trabalho.</div>
+  </div>
+</div>
+
+<h2>Conclusão</h2>
+
+<p>A formatação das referências bibliográficas não precisa ser a parte mais estressante do seu percurso acadêmico. Com a ajuda da tecnologia, você consegue resolver essa etapa em poucos instantes e focar na entrega do seu projeto.</p>
+
+<p>Evite erros e surpresas na banca de avaliação do seu TCC ou artigo científico. Acesse o Transformice agora mesmo e gere suas referências gratuitamente na norma ABNT atualizada.</p>
+
+<div class="cta-box">
+  <h2>Gere suas referências ABNT agora</h2>
+  <p>Gratuito, sem cadastro, atualizado para a NBR 6023:2025. Cole a URL ou DOI e receba a referência formatada em segundos.</p>
+  <a href="https://transformice.net.br" class="btn-cta">Acessar o Transformice</a>
+</div>
+
+</article>
+</div>
+
+<footer>
+  <p>© 2025 Transformice · <a href="/">Gerador ABNT</a> · <a href="/faq.html">FAQ</a> · <a href="/blog/">Blog</a> · <a href="mailto:contato@transformice.net.br">contato@transformice.net.br</a></p>
+</footer>
+
+</body>
+</html>
