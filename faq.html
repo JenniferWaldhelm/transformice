@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dúvidas Frequentes sobre ABNT | Transformice</title>
+<meta name="description" content="Tire suas dúvidas sobre como citar sites, leis, vídeos e artigos no formato ABNT NBR 6023:2025. Respostas práticas para as perguntas mais comuns.">
+<meta name="robots" content="index, follow">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HWM13D0G17"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag("js", new Date());
+  gtag("config", "G-HWM13D0G17");
+</script>
+<style>
+  :root {
+    --olive: #6c8b2d;
+    --green: #7aa91a;
+    --dark-olive: #606d3d;
+    --dark: #525050;
+    --bg: #f7f8f4;
+    --white: #ffffff;
+    --border: #e2e6d8;
+    --text: #2d3020;
+    --muted: #7a7f6a;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+
+  /* NAV */
+  nav {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .nav-brand { font-size: 1.2rem; font-weight: 800; color: var(--olive); text-decoration: none; letter-spacing: -0.02em; }
+  .nav-links { display: flex; gap: 1.5rem; list-style: none; }
+  .nav-links a { font-size: 13.5px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  .nav-links a:hover, .nav-links a.active { color: var(--olive); font-weight: 600; }
+  .nav-cta { background: var(--olive); color: white !important; padding: 6px 14px; border-radius: 6px; font-weight: 600 !important; }
+  .nav-cta:hover { background: var(--dark-olive) !important; color: white !important; }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, #eaf0db 0%, #f7f8f4 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 3rem 1.5rem 2.5rem;
+    text-align: center;
+  }
+  .hero-tag { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dark-olive); background: #d4e4a8; padding: 3px 10px; border-radius: 20px; margin-bottom: 1rem; }
+  .hero h1 { font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight: 800; color: var(--dark); margin-bottom: 0.75rem; line-height: 1.2; }
+  .hero p { font-size: 1rem; color: var(--muted); max-width: 520px; margin: 0 auto; }
+
+  /* CONTENT */
+  .content { max-width: 760px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+
+  /* CATEGORY */
+  .faq-category { margin-bottom: 2.5rem; }
+  .category-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--dark-olive);
+    margin-bottom: 1rem;
+  }
+  .category-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* FAQ ITEM */
+  details {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  details:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  details[open] { border-color: #c8dda8; }
+
+  summary {
+    padding: 1rem 1.25rem;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--dark);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    list-style: none;
+    user-select: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after {
+    content: '+';
+    font-size: 1.25rem;
+    font-weight: 300;
+    color: var(--olive);
+    flex-shrink: 0;
+    transition: transform 0.2s;
+    line-height: 1;
+  }
+  details[open] summary::after { transform: rotate(45deg); }
+  details[open] summary { color: var(--olive); }
+
+  .faq-body {
+    padding: 0 1.25rem 1.25rem;
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.75;
+  }
+  .faq-body p { margin-bottom: 0.75rem; }
+  .faq-body p:last-child { margin-bottom: 0; }
+  .faq-body code {
+    background: #eaf0db;
+    color: var(--dark-olive);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: monospace;
+  }
+  .faq-body .ref-example {
+    background: #f7f8f4;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--olive);
+    border-radius: 0 6px 6px 0;
+    padding: 10px 14px;
+    margin: 10px 0;
+    font-family: Georgia, serif;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .faq-body a { color: var(--olive); text-decoration: none; }
+  .faq-body a:hover { text-decoration: underline; }
+
+  /* CTA */
+  .cta-box {
+    background: linear-gradient(135deg, #eaf0db, #f7f8f4);
+    border: 1px solid #c8dda8;
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-align: center;
+    margin-top: 3rem;
+  }
+  .cta-box h2 { font-size: 1.25rem; font-weight: 700; color: var(--dark); margin-bottom: 0.5rem; }
+  .cta-box p { font-size: 14px; color: var(--muted); margin-bottom: 1.25rem; }
+  .btn-cta {
+    display: inline-block;
+    background: var(--olive);
+    color: white;
+    padding: 11px 28px;
+    border-radius: 7px;
+    font-size: 14.5px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .btn-cta:hover { background: var(--dark-olive); }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--olive); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="/">Transformice</a>
+  <ul class="nav-links">
+    <li><a href="/">Gerador</a></li>
+    <li><a href="/faq.html" class="active">FAQ</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/" class="nav-cta">Gerar referência</a></li>
+  </ul>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">Dúvidas frequentes</div>
+  <h1>Tudo sobre referências ABNT</h1>
+  <p>Respostas práticas para as perguntas mais comuns sobre a norma NBR 6023:2025.</p>
+</div>
+
+<div class="content">
+
+  <!-- CATEGORIA 1 -->
+  <div class="faq-category">
+    <div class="category-label">Sobre a norma</div>
+
+    <details>
+      <summary>O que é a ABNT NBR 6023:2025?</summary>
+      <div class="faq-body">
+        <p>A ABNT NBR 6023:2025 é a terceira edição da norma técnica brasileira que define as regras para elaboração de referências bibliográficas. Publicada em 21 de maio de 2025, ela substitui a versão de 2018 e atualiza as diretrizes para incluir novos tipos de documentos digitais, redes sociais, podcasts e conteúdos gerados por inteligência artificial.</p>
+        <p>O Transformice é atualizado conforme essa versão mais recente, garantindo que suas referências estejam em conformidade com o que as bancas examinadoras exigem em 2025.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>O que mudou da NBR 6023:2018 para a 2025?</summary>
+      <div class="faq-body">
+        <p>As principais mudanças incluem regras mais claras para documentos digitais, redes sociais (Instagram, YouTube, TikTok), podcasts, documentos de acesso restrito e conteúdos gerados por IA. Também foram atualizados os critérios de autoria para organizações governamentais e normas técnicas.</p>
+        <p>Se você usou um gerador ou guia baseado na versão de 2018, vale revisar suas referências — especialmente as de fontes online.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Minha faculdade pode exigir uma versão diferente da norma?</summary>
+      <div class="faq-body">
+        <p>Sim. Algumas instituições têm manuais próprios de normalização que podem diferir em detalhes da ABNT. Antes de entregar seu trabalho, consulte o manual de normas da sua faculdade ou biblioteca. Em caso de dúvida, a versão mais recente da NBR 6023 (2025) é sempre a referência oficial.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- CATEGORIA 2 -->
+  <div class="faq-category">
+    <div class="category-label">Sites e páginas web</div>
+
+    <details>
+      <summary>Como citar um site sem autor na ABNT?</summary>
+      <div class="faq-body">
+        <p>Quando não há autor identificável, a referência começa pelo <strong>título em letras maiúsculas</strong>. Se a primeira palavra for um artigo (O, A, Um), ele vai junto com a segunda palavra em caixa alta.</p>
+        <div class="ref-example">COMO fazer referência ABNT. <strong>Portal Acadêmico</strong>, São Paulo, 10 mar. 2024. Disponível em: https://exemplo.com. Acesso em: 8 jun. 2026.</div>
+        <p>No Transformice, basta colar a URL — o sistema detecta automaticamente a ausência de autor e formata pelo título.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Como referenciar uma página do governo (.gov.br)?</summary>
+      <div class="faq-body">
+        <p>Páginas governamentais geralmente têm autoria institucional. A entrada é feita pelo nome do órgão em maiúsculas, seguindo a hierarquia (país, estado ou município primeiro).</p>
+        <div class="ref-example">BRASIL. Ministério da Saúde. <strong>Calendário nacional de vacinação</strong>. Brasília, DF: Ministério da Saúde, 2024. Disponível em: https://saude.gov.br. Acesso em: 8 jun. 2026.</div>
+      </div>
+    </details>
+
+    <details>
+      <summary>O que fazer quando a URL é muito longa na referência?</summary>
+      <div class="faq-body">
+        <p>A ABNT não prevê abreviação de URLs. A orientação é incluir o endereço completo. Em documentos digitais (Word, PDF), você pode usar a URL como hiperlink sem prejudicar a formatação. Evite quebrar a URL no meio de uma palavra — quebre apenas nos sinais de pontuação (<code>/</code>, <code>-</code>, <code>.</code>).</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- CATEGORIA 3 -->
+  <div class="faq-category">
+    <div class="category-label">Legislação</div>
+
+    <details>
+      <summary>Como fazer referência de lei na ABNT?</summary>
+      <div class="faq-body">
+        <p>Referências de leis seguem a seção 7.11.1 da NBR 6023:2025. Os elementos obrigatórios são: <strong>jurisdição</strong> (em maiúsculas), tipo + número + data completa da lei, ementa, local, órgão e ano.</p>
+        <div class="ref-example">BRASIL. Lei nº 9.433, de 8 de janeiro de 1997. Institui a Política Nacional de Recursos Hídricos e cria o Sistema Nacional de Gerenciamento de Recursos Hídricos. Brasília, DF: Presidência da República, 1997. Disponível em: https://planalto.gov.br. Acesso em: 8 jun. 2026.</div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Como citar decreto municipal ou estadual?</summary>
+      <div class="faq-body">
+        <p>Para decretos municipais, a jurisdição inclui o nome do município e o estado entre parênteses para evitar ambiguidade com cidades homônimas.</p>
+        <div class="ref-example">CURITIBA (PR). Decreto nº 1.234, de 15 de março de 2023. Dispõe sobre... Curitiba: Prefeitura Municipal, 2023. Disponível em: https://... Acesso em: 8 jun. 2026.</div>
+        <p>Use a aba <strong>🔗 URL</strong> do Transformice colando o link da lei — o sistema detecta automaticamente que se trata de legislação e aplica o formato correto.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Preciso incluir a ementa completa da lei na referência?</summary>
+      <div class="faq-body">
+        <p>Sim, conforme a NBR 6023:2025. A ementa é o texto que descreve o que a lei dispõe e é um elemento essencial para legislação. Em ementas muito longas, você pode suprimir parte do texto usando reticências entre colchetes <code>[...]</code>, desde que o sentido não seja alterado.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- CATEGORIA 4 -->
+  <div class="faq-category">
+    <div class="category-label">Vídeos e redes sociais</div>
+
+    <details>
+      <summary>Como citar vídeo do YouTube na ABNT?</summary>
+      <div class="faq-body">
+        <p>Conforme a seção 7.13.2 da NBR 6023:2025, vídeos online são referenciados com o nome do canal em maiúsculas, título do vídeo em negrito, plataforma e data de publicação.</p>
+        <div class="ref-example">CANAL FUTURA. <strong>Educação ambiental nas escolas brasileiras</strong>. [S. l.]: YouTube, 15 mar. 2021. 1 vídeo online (12 min). Disponível em: https://www.youtube.com/watch?v=xxx. Acesso em: 8 jun. 2026.</div>
+        <p>No Transformice, basta colar a URL do YouTube — o sistema busca automaticamente o título e a data de publicação via API.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Como referenciar post do Instagram na ABNT?</summary>
+      <div class="faq-body">
+        <p>Conforme a seção 8.7.3 da NBR 6023:2025, publicações em redes sociais incluem o autor ou organização, o conteúdo do post, a rede social e o perfil.</p>
+        <div class="ref-example">PREFEITURA MUNICIPAL DE IBIPORÃ. <strong>Alô, Ibiporãaa! O clima mais esperado do ano já tá chegando!</strong> Ibiporã, 13 maio 2025. Instagram: prefeituromunicipaldeibipora. Disponível em: https://www.instagram.com/p/xxx. Acesso em: 8 jun. 2026.</div>
+        <p>Como o Instagram bloqueia extração automática, o Transformice abre um formulário simples para você preencher os dados do post.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Como citar podcast na ABNT?</summary>
+      <div class="faq-body">
+        <p>Podcasts são tratados como documentos sonoros em meio eletrônico (seção 7.13.5). Inclua o título do episódio, o programa, a plataforma, a data e a duração se disponível.</p>
+        <div class="ref-example">PODCAST CBN. <strong>Episódio 120: economia circular</strong>. [S. l.]: Spotify, 20 abr. 2024. Podcast. Disponível em: https://spotify.com/xxx. Acesso em: 8 jun. 2026.</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- CATEGORIA 5 -->
+  <div class="faq-category">
+    <div class="category-label">Artigos e periódicos</div>
+
+    <details>
+      <summary>Como citar artigo científico com DOI na ABNT?</summary>
+      <div class="faq-body">
+        <p>O DOI (Digital Object Identifier) deve ser incluído antes do "Disponível em:", conforme a seção 7.7.6 da norma.</p>
+        <div class="ref-example">SILVA, João A.; SOUZA, Maria B. Gestão de recursos hídricos urbanos. <strong>Revista Brasileira de Engenharia Ambiental</strong>, Campina Grande, v. 25, n. 3, p. 45-60, mar. 2024. DOI: 10.1590/xxx. Disponível em: https://scielo.br/xxx. Acesso em: 8 jun. 2026.</div>
+        <p>Na aba <strong>🔬 DOI</strong> do Transformice, cole o código DOI — o sistema busca todos os metadados automaticamente via API Crossref.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>O que fazer quando o artigo tem mais de 3 autores?</summary>
+      <div class="faq-body">
+        <p>Quando há 4 ou mais autores, a norma permite indicar apenas o primeiro, seguido da expressão <code>et al.</code> em itálico. Também é permitido listar todos os autores — mas a opção escolhida deve ser mantida em todas as referências do trabalho.</p>
+        <div class="ref-example">SANTOS, Ana C. <em>et al.</em> Biodiversidade em áreas de preservação permanente. <strong>Ciência e Ambiente</strong>, Santa Maria, v. 12, n. 1, p. 10-25, jan. 2023.</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- CATEGORIA 6 -->
+  <div class="faq-category">
+    <div class="category-label">Trabalhos acadêmicos e livros</div>
+
+    <details>
+      <summary>Como referenciar dissertação de mestrado ou tese de doutorado?</summary>
+      <div class="faq-body">
+        <p>Conforme a seção 7.1.2 da NBR 6023:2025, os elementos obrigatórios são: autor, título, ano, tipo do trabalho com grau e área entre parênteses, unidade acadêmica, instituição, cidade e ano.</p>
+        <div class="ref-example">RODRIGUES, Ana Lúcia. <strong>Impacto de programas de exercícios no local de trabalho</strong>. 2009. Dissertação (Mestrado em Fisiopatologia Experimental) – Faculdade de Medicina, Universidade de São Paulo, São Paulo, 2009.</div>
+        <p>Use a aba <strong>✏️ Manual</strong> do Transformice e selecione "TCC / Dissertação / Tese" para preencher todos os campos corretamente.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Como citar livro com editor (org.) na ABNT?</summary>
+      <div class="faq-body">
+        <p>Quando o livro é uma coletânea organizada por editor, a entrada é feita pelo organizador seguido da abreviatura entre parênteses.</p>
+        <div class="ref-example">FERREIRA, Léslie P. (org.). <strong>O fonoaudiólogo e a escola</strong>. São Paulo: Summus, 1991.</div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Como fazer referência de capítulo de livro na ABNT?</summary>
+      <div class="faq-body">
+        <p>Capítulos com autor próprio dentro de uma obra coletiva são referenciados com autor e título da parte, seguidos da expressão <code>In:</code> e da referência completa do livro.</p>
+        <div class="ref-example">ROMANO, Giovanni. Imagens da juventude na era moderna. <em>In</em>: LEVI, G.; SCHMIDT, J. (org.). <strong>História dos jovens 2</strong>: a época contemporânea. São Paulo: Companhia das Letras, 1996. p. 7-16.</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- CATEGORIA 7 -->
+  <div class="faq-category">
+    <div class="category-label">Sobre o Transformice</div>
+
+    <details>
+      <summary>O Transformice é gratuito?</summary>
+      <div class="faq-body">
+        <p>Sim, o Transformice é completamente gratuito. Você pode gerar quantas referências quiser sem pagar nada e sem precisar criar conta.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>As referências geradas são 100% confiáveis?</summary>
+      <div class="faq-body">
+        <p>O Transformice usa inteligência artificial e APIs de metadados para gerar as referências, o que garante alta precisão. No entanto, sempre recomendamos revisar o resultado — especialmente para documentos incomuns como legislação municipal, relatórios técnicos e publicações institucionais, onde os metadados podem estar incompletos.</p>
+        <p>O sistema indica automaticamente quando algum dado não foi identificado, pedindo que você complete as informações.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Posso exportar as referências para o Word?</summary>
+      <div class="faq-body">
+        <p>Sim! Após gerar as referências, clique em <strong>⬇ Baixar Word (.docx)</strong>. O arquivo é gerado com formatação ABNT: fonte Times New Roman 12pt, margens corretas (3cm esquerda/superior, 2cm direita/inferior), espaçamento simples e recuo de segunda linha (hanging indent) conforme a norma.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>O Transformice funciona com DOI e ISBN?</summary>
+      <div class="faq-body">
+        <p>Sim! Use as abas dedicadas:</p>
+        <p>🔬 <strong>DOI</strong> — busca metadados via API Crossref. Ideal para artigos científicos do Scielo, PubMed e periódicos internacionais.</p>
+        <p>📚 <strong>ISBN</strong> — busca via Open Library e Google Books. Ideal para livros e publicações com ISBN-10 ou ISBN-13.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-box">
+    <h2>Não encontrou sua dúvida?</h2>
+    <p>Use o Transformice para gerar sua referência automaticamente — funciona com URLs, DOIs, ISBNs, PDFs e muito mais.</p>
+    <a href="/" class="btn-cta">Gerar referência grátis</a>
+  </div>
+
+</div>
+
+<footer>
+  <p>© 2025 Transformice · <a href="/">Gerador ABNT</a> · <a href="/faq.html">FAQ</a> · <a href="/blog/">Blog</a></p>
+</footer>
+
+</body>
+</html>
