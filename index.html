@@ -322,6 +322,11 @@ BRASIL. Lei nº 9.433, de 8 de janeiro de 1997..."></textarea>
   </div>
 
   <p class="footer-note">Transformice · Referências geradas com IA conforme ABNT NBR 6023:2025 · Verifique sempre os metadados</p>
+  <p class="footer-note" style="margin-top:6px;">
+    <a href="/faq.html" style="color:var(--olive);">FAQ</a> ·
+    <a href="/blog/" style="color:var(--olive);">Blog</a> ·
+    <a href="mailto:contato@transformice.net.br" style="color:var(--olive);">contato@transformice.net.br</a>
+  </p>
 </div>
 
 <!-- MODAL preenchimento manual para erro -->
@@ -350,8 +355,8 @@ BRASIL. Lei nº 9.433, de 8 de janeiro de 1997..."></textarea>
 </div>
 
 <script>
-const GEMINI_KEY = "AIzaSyCiABlFUS8RzRTQuaPbCROaeKKie7rsdjQ";
-const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const GROQ_KEY = "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";
+const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
 
 // ── Detecção de tipo ─────────────────────────────────────────────────────────
 function detectType(url) {
@@ -1711,29 +1716,31 @@ async function callGroq(url, type) {
   const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
   const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
 
-  const prompt2 = `${PROMPTS[type]}\n\nURL: ${url}\nData de acesso: ${accessDate}\nGere a referência conforme ABNT NBR 6023:2025. Responda apenas com a referência formatada.`;
-  const resp = await fetch(`${GEMINI_API}?key=${GEMINI_KEY}`, {
+  const resp = await fetch(GROQ_API, {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    headers: {'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
     body: JSON.stringify({
-      contents: [{parts: [{text: prompt2}]}],
-      generationConfig: {temperature: 0.1, maxOutputTokens: 600}
+      model: 'llama-3.3-70b-versatile', temperature: 0.1, max_tokens: 600,
+      messages: [
+        {role:'system', content: PROMPTS[type]},
+        {role:'user', content:`URL: ${url}\nData de acesso: ${accessDate}\nGere a referência conforme ABNT NBR 6023:2025. Responda apenas com a referência formatada.`}
+      ]
     })
   });
   if (!resp.ok) { const e = await resp.json().catch(()=>{}); throw new Error(e?.error?.message||`Erro HTTP ${resp.status}`); }
   const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  const text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Sem resposta da API.');
   return text;
 }
 
 async function callGroqManual(prompt) {
-  const resp = await fetch(`${GEMINI_API}?key=${GEMINI_KEY}`, {
+  const resp = await fetch(GROQ_API, {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    headers: {'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
     body: JSON.stringify({
-      contents: [{parts: [{text: prompt}]}],
-      generationConfig: {temperature: 0.1, maxOutputTokens: 600}
+      model: 'llama-3.3-70b-versatile', temperature: 0.1, max_tokens: 600,
+      messages: [{role:'user', content: prompt}]
     })
   });
   if (!resp.ok) { const e = await resp.json().catch(()=>{}); throw new Error(e?.error?.message||`Erro HTTP ${resp.status}`); }
