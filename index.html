@@ -1621,10 +1621,21 @@ async function generateRefs() {
           <div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Analisando PDF...</div>`;
 
         try {
-          // Tentar buscar o PDF e extrair via PDF.js
-          const resp = await fetch(url);
-          if (!resp.ok) throw new Error('PDF inacessível');
-          const buffer = await resp.arrayBuffer();
+          // Tentar buscar o PDF direto primeiro; se falhar (CORS), usar o Worker como proxy
+          let buffer;
+          try {
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('PDF inacessível');
+            buffer = await resp.arrayBuffer();
+          } catch (corsErr) {
+            // Fallback: buscar via Worker (roda no servidor, sem CORS)
+            const proxyResp = await fetch(`${WORKER_PROXY}fetch-pdf?url=${encodeURIComponent(url)}`);
+            if (!proxyResp.ok) {
+              const errData = await proxyResp.json().catch(() => ({}));
+              throw new Error(errData?.error?.message || 'PDF inacessível mesmo via proxy');
+            }
+            buffer = await proxyResp.arrayBuffer();
+          }
 
           // Configurar PDF.js worker
           if (typeof pdfjsLib !== 'undefined') {
