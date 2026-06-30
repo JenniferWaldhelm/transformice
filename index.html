@@ -355,8 +355,7 @@ BRASIL. Lei nº 9.433, de 8 de janeiro de 1997..."></textarea>
 </div>
 
 <script>
-const GROQ_KEY = "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";
-const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
+const WORKER_PROXY = "https://transformice.jemartinsw.workers.dev/";
 
 // ── Detecção de tipo ─────────────────────────────────────────────────────────
 function detectType(url) {
@@ -1882,9 +1881,9 @@ async function callGroq(url, type) {
   const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
   const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
 
-  const resp = await fetch(GROQ_API, {
+  const resp = await fetch(WORKER_PROXY, {
     method: 'POST',
-    headers: {'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile', temperature: 0.1, max_tokens: 600,
       messages: [
@@ -1901,9 +1900,9 @@ async function callGroq(url, type) {
 }
 
 async function callGroqManual(prompt) {
-  const resp = await fetch(GROQ_API, {
+  const resp = await fetch(WORKER_PROXY, {
     method: 'POST',
-    headers: {'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile', temperature: 0.1, max_tokens: 600,
       messages: [{role:'user', content: prompt}]
