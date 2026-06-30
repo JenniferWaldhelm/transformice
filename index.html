@@ -1621,6 +1621,2189 @@ async function generateRefs() {
           <div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Analisando PDF...</div>`;
 
         try {
+          // Buscar sempre via Worker (servidor, sem restrição de CORS)
+          const proxyResp = await fetch(`${WORKER_PROXY}fetch-pdf?url=${encodeURIComponent(url)}`);
+          if (!proxyResp.ok) {
+            const errData = await proxyResp.json().catch(() => ({}));
+            throw new Error(errData?.error?.message || 'PDF inacessível mesmo via proxy');
+          }
+          const buffer = await proxyResp.arrayBuffer();
+
+          // Configurar PDF.js worker
+          if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          }
+
+          const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+          let text = '';
+          const maxPages = Math.min(pdf.numPages, 3);
+          for (let p = 1; p <= maxPages; p++) {
+            const page = await pdf.getPage(p);
+            const tc = await page.getTextContent();
+            text += tc.items.map(i => i.str).join(' ') + ' ';
+          }
+          text = text.trim().replace(/\s+/g,' ').substring(0, 4000);
+
+          if (text.length < 80) throw new Error('Texto não extraível');
+
+          // Detectar tipo pelo conteúdo
+          let pdfType = 'web';
+          if (/resolução|resolucao|portaria|decreto|lei n[°º]/i.test(text)) pdfType = 'legislacao';
+          else if (/ABNT NBR|ISO \d|norma técnica/i.test(text)) pdfType = 'norma';
+          else if (/dissertação|mestrado|doutorado|tcc/i.test(text)) pdfType = 'academico';
+          else if (/contratante|contratada|produto \d|plano diretor/i.test(text)) pdfType = 'relatorio';
+
+          const today = new Date();
+          const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+          const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+          const prompt = `Você é especialista em ABNT NBR 6023:2025.
+Analise o conteúdo do PDF abaixo e gere a referência bibliográfica correta.
+URL do arquivo: ${url}
+Conteúdo extraído:
+${text}
+Identifique o tipo de documento e gere a referência completa conforme ABNT NBR 6023:2025.
+Use **negrito** no título. Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Data de acesso: ${accessDate}
+Responda APENAS com a referência formatada. Sem explicações.`;
+
+          itemDiv.innerHTML = `
+            <div class="ref-url-small">${url}</div>
+            <span class="ref-type-tag tag-tcc">PDF remoto</span>
+            <div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Gerando referência...</div>`;
+
+          const ref = await callGroqManual(prompt);
+          await processAndValidate(ref, pdfType, url, itemDiv, url);
+
+        } catch(fetchErr) {
+          // PDF inacessível por CORS ou outro erro — abrir formulário manual
+          const ts = Date.now();
+          itemDiv.innerHTML = `
+            <div class="ref-url-small">${url}</div>
+            <span class="ref-type-tag tag-tcc">PDF remoto</span>
+            <div style="font-family:sans-serif;font-size:12px;color:#5a008a;margin:6px 0 10px;">
+              ℹ️ Não foi possível acessar o PDF automaticamente (bloqueio CORS). Preencha os dados manualmente:
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+              <div class="form-group">
+                <label>Tipo de documento</label>
+                <select id="pdf-rem-tipo-${ts}">
+                  <option value="legislacao">Legislação (lei, decreto, resolução)</option>
+                  <option value="norma">Norma técnica (ABNT, ISO)</option>
+                  <option value="relatorio">Relatório técnico</option>
+                  <option value="academico">TCC / Dissertação / Tese</option>
+                  <option value="web">Documento técnico / Outro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Autor / Organização</label>
+                <input type="text" id="pdf-rem-autor-${ts}" placeholder="Ex: CONSELHO NACIONAL DO MP" />
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label>Título do documento</label>
+              <input type="text" id="pdf-rem-titulo-${ts}" placeholder="Ex: Resolução nº 243, de 26 de outubro de 2021" />
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+              <div class="form-group">
+                <label>Local</label>
+                <input type="text" id="pdf-rem-local-${ts}" placeholder="Ex: Brasília" />
+              </div>
+              <div class="form-group">
+                <label>Órgão / Editora</label>
+                <input type="text" id="pdf-rem-orgao-${ts}" placeholder="Ex: CNMP" />
+              </div>
+              <div class="form-group">
+                <label>Ano</label>
+                <input type="text" id="pdf-rem-ano-${ts}" placeholder="Ex: 2021" />
+              </div>
+            </div>
+            <button class="btn-fill-manual" style="font-size:13px;padding:6px 14px;"
+              onclick="gerarRefPDFRemoto(this, '${url}', ${ts})">
+              ✓ Gerar referência
+            </button>`;
+        }
+        continue;
+      }
+
+      if (type === 'video') {
+        // YouTube: buscar metadados reais via oEmbed
+        itemDiv.innerHTML = `<div class="ref-url-small">${url}</div><span class="ref-type-tag tag-tcc">Vídeo (YouTube)</span><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Buscando metadados...</div>`;
+        try {
+          ref = await generateYouTubeRef(url);
+        } catch(e) {
+          // oEmbed falhou — usar IA como fallback
+          ref = await callGroq(url, type);
+        }
+      } else {
+        ref = await callGroq(url, type);
+      }
+
+      await processAndValidate(ref, type, url, itemDiv, url);
+    } catch(e) {
+      allRefs.push({url, ref:'', type, ok:false});
+      appendRefLine(output, url, label, css, null, true, url);
+    }
+  }
+
+  updateResultsHeader();
+  setLoading(false);
+  document.getElementById('progress-label').textContent = 'Concluído!';
+  setTimeout(()=>{
+    document.getElementById('progress-wrap').style.display='none';
+    document.getElementById('progress-label').style.display='none';
+  }, 2000);
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function appendRefLine(container, url, label, css, ref, isError, errorUrl) {
+  const div = document.createElement('div');
+  div.className = 'ref-line';
+  if (isError) {
+    div.innerHTML = `
+      <div class="ref-url-small">${url}</div>
+      <span class="ref-type-tag ${css}">${label}</span>
+      <div class="ref-error">Não foi possível extrair os metadados automaticamente.</div>
+      <button class="btn-fill-manual" onclick="openModal('${escAttr(url)}')">✏️ Preencher manualmente</button>`;
+  } else {
+    div.innerHTML = `
+      <div class="ref-url-small">${url}</div>
+      <span class="ref-type-tag ${css}">${label}</span>
+      <div>${renderRef(ref)}</div>`;
+  }
+  container.appendChild(div);
+}
+
+// ── Geração manual (aba manual) ──────────────────────────────────────────────
+async function generateManual() {
+  const tipo = document.getElementById('m-tipo').value;
+  const url = document.getElementById('m-url').value.trim();
+  const dados = collectFields('manual-fields-', tipo, 'm-');
+
+  const prompt = buildManualPrompt(tipo, dados, url);
+  if (!prompt) { alert('Preencha pelo menos os campos principais.'); return; }
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  const div = document.createElement('div');
+  div.className = 'ref-line';
+  div.innerHTML = `<span class="ref-type-tag tag-manual">Manual</span><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Gerando...</div>`;
+  output.appendChild(div);
+
+  try {
+    const ref = await callGroqManual(prompt);
+    allRefs.push({url: url||'(manual)', ref, type:'manual', ok:true});
+    div.innerHTML = `
+      <div class="ref-url-small">${url||'(preenchimento manual)'}</div>
+      <span class="ref-type-tag tag-manual">Manual</span>
+      <div>${renderRef(ref)}</div>`;
+    updateResultsHeader();
+    resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+  } catch(e) {
+    div.innerHTML = `<span class="ref-type-tag tag-manual">Manual</span><div class="ref-error">Erro: ${e.message}</div>`;
+  }
+}
+
+// ── Modal para erros ─────────────────────────────────────────────────────────
+function openModal(url) {
+  document.getElementById('modal-url').textContent = url;
+  document.getElementById('modal-tipo').value = detectType(url);
+  updateModalForm();
+  document.getElementById('modal').style.display = 'flex';
+  window._modalUrl = url;
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+async function confirmManual() {
+  const url = window._modalUrl || '';
+  const tipo = document.getElementById('modal-tipo').value;
+  const dados = collectFields('modal-fields', tipo, 'modal-fields-');
+  const prompt = buildManualPrompt(tipo, dados, url);
+  if (!prompt) { alert('Preencha pelo menos os campos principais.'); return; }
+
+  closeModal();
+
+  // Encontrar a linha de erro correspondente e substituir
+  const output = document.getElementById('refs-output');
+  const lines = output.querySelectorAll('.ref-line');
+  let targetLine = null;
+  lines.forEach(l => { if (l.querySelector('.ref-url-small')?.textContent === url) targetLine = l; });
+
+  if (targetLine) {
+    targetLine.innerHTML = `<div class="ref-url-small">${url}</div><span class="ref-type-tag tag-manual">Manual</span><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Gerando...</div>`;
+  }
+
+  try {
+    const ref = await callGroqManual(prompt);
+    // Atualizar ou adicionar
+    const existing = allRefs.find(r => r.url === url);
+    if (existing) { existing.ref = ref; existing.ok = true; existing.type = 'manual'; }
+    else allRefs.push({url, ref, type:'manual', ok:true});
+
+    if (targetLine) {
+      targetLine.innerHTML = `
+        <div class="ref-url-small">${url}</div>
+        <span class="ref-type-tag tag-manual">Manual</span>
+        <div>${renderRef(ref)}</div>`;
+    }
+    updateResultsHeader();
+  } catch(e) {
+    if (targetLine) targetLine.querySelector('div:last-child').innerHTML = `<span class="ref-error">Erro: ${e.message}</span>`;
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function collectFields(prefix, tipo, altPrefix) {
+  const fields = MANUAL_FIELDS[tipo] || [];
+  const data = {};
+  fields.forEach(f => {
+    const el = document.getElementById(`${prefix}-${f.id}`) || document.getElementById(`${altPrefix}${f.id}`);
+    if (el) data[f.id] = el.value.trim();
+  });
+  return data;
+}
+
+function buildManualPrompt(tipo, dados, url) {
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  const filled = Object.entries(dados).filter(([k,v])=>v).map(([k,v])=>`${k}: ${v}`).join('\n');
+  if (!filled) return null;
+
+  return `${PROMPTS[tipo]}\n\nDados fornecidos pelo usuário:\n${filled}\nURL: ${url||'não informada'}\nData de acesso: ${accessDate}\n\nFormate a referência ABNT NBR 6023:2025 com esses dados. Responda apenas com a referência.`;
+}
+
+async function callGroq(url, type) {
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  const resp = await fetch(WORKER_PROXY, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile', temperature: 0.1, max_tokens: 600,
+      messages: [
+        {role:'system', content: PROMPTS[type]},
+        {role:'user', content:`URL: ${url}\nData de acesso: ${accessDate}\nGere a referência conforme ABNT NBR 6023:2025. Responda apenas com a referência formatada.`}
+      ]
+    })
+  });
+  if (!resp.ok) { const e = await resp.json().catch(()=>{}); throw new Error(e?.error?.message||`Erro HTTP ${resp.status}`); }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Sem resposta da API.');
+  return text;
+}
+
+async function callGroqManual(prompt) {
+  const resp = await fetch(WORKER_PROXY, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile', temperature: 0.1, max_tokens: 600,
+      messages: [{role:'user', content: prompt}]
+    })
+  });
+  if (!resp.ok) { const e = await resp.json().catch(()=>{}); throw new Error(e?.error?.message||`Erro HTTP ${resp.status}`); }
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Sem resposta da API.');
+  return text;
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SISTEMA DE VALIDAÇÃO E CORREÇÃO AUTOMÁTICA
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Erros comuns que podem ser corrigidos automaticamente ────────────────────
+function autoCorrect(ref, type) {
+  let r = ref;
+
+  // 1. Corrigir data de acesso em formato ISO (2026-06-08 → 8 jun. 2026)
+  r = r.replace(/Acesso em:\s*(\d{4})-(\d{2})-(\d{2})/g, (_, y, m, d) => {
+    const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+    return `Acesso em: ${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
+  });
+
+  // 2. Corrigir mês por extenso na data de acesso (junho → jun.)
+  const mesesExtenso = {
+    'janeiro':'jan.','fevereiro':'fev.','março':'mar.','abril':'abr.',
+    'maio':'maio','junho':'jun.','julho':'jul.','agosto':'ago.',
+    'setembro':'set.','outubro':'out.','novembro':'nov.','dezembro':'dez.'
+  };
+  r = r.replace(/Acesso em:\s*(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})/gi, (_, d, mes, y) => {
+    const mesLower = mes.toLowerCase();
+    const mesAbrev = mesesExtenso[mesLower] || mes;
+    return `Acesso em: ${d} ${mesAbrev} ${y}`;
+  });
+  r = r.replace(/Acesso em:\s*(\d{1,2})\s+(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(\d{4})/gi, (_, d, mes, y) => {
+    const mesAbrev = mesesExtenso[mes.toLowerCase()] || mes;
+    return `Acesso em: ${d} ${mesAbrev} ${y}`;
+  });
+
+  // 3. Garantir ponto final
+  r = r.trim();
+  if (!r.endsWith('.')) r += '.';
+
+  // 4. Corrigir "Acesso em: 8 jun 2026" → "Acesso em: 8 jun. 2026" (sem ponto)
+  r = r.replace(/Acesso em:\s*(\d{1,2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\s+(\d{4})/gi, (_, d, m, y) => {
+    const ml = m.toLowerCase();
+    const fixed = ml === 'mai' ? 'maio' : ml + '.';
+    return `Acesso em: ${d} ${fixed} ${y}`;
+  });
+
+  // 5. Norma técnica: garantir que título tenha dois pontos separando sigla do título
+  if (type === 'norma') {
+    r = r.replace(/(\*\*[A-Z]+\s+[A-Z]+\s*[\d:]+)\s+([a-z])/g, (_, sigla, resto) => {
+      if (!sigla.includes(':')) return sigla.replace('**','**') + ': ' + resto;
+      return sigla + ' ' + resto;
+    });
+  }
+
+  // 6. Legislação: número sem ponto (Lei 4337 → Lei nº 4.337)
+  if (type === 'legislacao') {
+    r = r.replace(/n[°oº]\s*(\d{4,5})(?!\.)/g, (_, num) => {
+      const formatted = num.replace(/(\d)(\d{3})$/, '$1.$2');
+      return `nº ${formatted}`;
+    });
+    // "N° " → "nº "
+    r = r.replace(/N[°º]\s+/g, 'nº ');
+  }
+
+  return r;
+}
+
+// ── Validar se referência tem elementos mínimos obrigatórios ─────────────────
+function validateRef(ref, type) {
+  const issues = [];
+  const r = ref.replace(/\*\*/g, '');
+
+  switch(type) {
+    case 'legislacao':
+      if (!/^[A-ZÁÉÍÓÚÃÕÂÊÔÇ\s]+[.(]/.test(r)) issues.push('Jurisdição em maiúsculas ausente');
+      if (!/nº\s*\d/.test(r)) issues.push('Número do ato ausente ou mal formatado');
+      if (!/de\s+\d{1,2}\s+de\s+\w+\s+de\s+\d{4}/.test(r)) issues.push('Data completa ausente (dia, mês por extenso, ano)');
+      if (r.split('.').length < 4) issues.push('Ementa provavelmente ausente');
+      break;
+
+    case 'artigo':
+      if (!r.includes(',')) issues.push('Elementos separados por vírgula ausentes');
+      if (!/v\.\s*\d|n\.\s*\d|p\.\s*\d/.test(r)) issues.push('Volume, número ou páginas ausentes');
+      if (!/\d{4}/.test(r)) issues.push('Ano ausente');
+      break;
+
+    case 'academico':
+      if (!/\d{4}/.test(r)) issues.push('Ano ausente');
+      if (!/Tese|Dissertação|Trabalho|Monografia/i.test(r)) issues.push('Tipo do trabalho ausente');
+      if (!/ – /.test(r)) issues.push('Unidade/instituição ausente (separados por –)');
+      break;
+
+    case 'livro':
+      if (!/\d{4}/.test(r)) issues.push('Ano ausente');
+      if (!r.includes(':')) issues.push('Editora ausente');
+      break;
+
+    case 'norma':
+      if (!/ASSOCIA[ÇC]ÃO|INSTITUTO|ORGANIZA[ÇC]ÃO|FUNDA[ÇC]ÃO|ABNT|ISO|IEC/i.test(r))
+        issues.push('Organização normalizadora ausente');
+      if (!r.includes(':')) issues.push('Separador entre sigla e título ausente');
+      if (!/\d{4}/.test(r)) issues.push('Ano ausente');
+      break;
+
+    case 'web':
+      if (!/Disponível em:/i.test(r)) issues.push('URL ausente (Disponível em:)');
+      if (!/Acesso em:/i.test(r)) issues.push('Data de acesso ausente');
+      if (!/\d{4}/.test(r)) issues.push('Ano ausente');
+      break;
+  }
+
+  // Verificações gerais
+  if (r.includes('[não identificado]')) {
+    const campos = r.match(/[\w\s]+\[não identificado\]/g) || [];
+    campos.forEach(c => issues.push(`Campo não identificado: ${c.replace('[não identificado]','').trim()}`));
+  }
+  if (!r.trim().endsWith('.')) issues.push('Ponto final ausente');
+
+  return issues;
+}
+
+// ── Função principal: valida, corrige e decide o que mostrar ─────────────────
+async function processAndValidate(ref, type, urlLabel, outputDiv, fileName) {
+  // Passo 1: correção automática
+  let corrected = autoCorrect(ref, type);
+
+  // Passo 2: validação
+  const issues = validateRef(corrected, type);
+
+  const {label, css} = TYPE_LABELS[type] || TYPE_LABELS.web;
+
+  if (issues.length === 0) {
+    // ✅ Referência válida
+    allRefs.push({url: urlLabel, ref: corrected, type, ok: true});
+    outputDiv.innerHTML = `
+      <div class="ref-url-small">${fileName || urlLabel}</div>
+      <span class="ref-type-tag ${css}">${label}</span>
+      <div>${renderRef(corrected)}</div>`;
+    updateResultsHeader();
+    return true;
+  }
+
+  // ⚠️ Tem problemas — tentar corrigir via IA uma segunda vez
+  const hasNaoIdentificado = corrected.includes('[não identificado]');
+
+  if (!hasNaoIdentificado && issues.length <= 2) {
+    // Tentar autocorreção via IA silenciosamente
+    try {
+      const fixPrompt = `Você é especialista em ABNT NBR 6023:2025.
+
+A referência abaixo foi gerada mas tem os seguintes problemas:
+${issues.map((p,i) => (i+1)+'. '+p).join('\n')}
+
+Referência com problemas:
+${corrected}
+
+Corrija APENAS os problemas listados mantendo todos os outros dados.
+Use **negrito** no título. Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência corrigida.`;
+
+      outputDiv.innerHTML = `
+        <div class="ref-url-small">${fileName || urlLabel}</div>
+        <span class="ref-type-tag ${css}">${label}</span>
+        <div style="color:var(--muted);font-family:sans-serif;font-size:12px;">Aplicando correção automática...</div>`;
+
+      const fixed = await callGroqManual(fixPrompt);
+      const fixed2 = autoCorrect(fixed, type);
+      const issuesAfter = validateRef(fixed2, type);
+
+      if (issuesAfter.length === 0) {
+        allRefs.push({url: urlLabel, ref: fixed2, type, ok: true});
+        outputDiv.innerHTML = `
+          <div class="ref-url-small">${fileName || urlLabel}</div>
+          <span class="ref-type-tag ${css}">${label}</span>
+          <div style="font-size:10px;color:var(--green);font-family:sans-serif;margin-bottom:3px;">✓ Corrigida automaticamente</div>
+          <div>${renderRef(fixed2)}</div>`;
+        updateResultsHeader();
+        return true;
+      }
+      // Ainda tem problemas — mostrar com aviso
+      corrected = fixed2;
+    } catch(e) {}
+  }
+
+  // Mostrar com aviso de problemas e campo para completar
+  const issuesList = issues.map(i => `<li>${i}</li>`).join('');
+  const escapedRef = corrected.replace(/`/g, "'");
+  outputDiv.innerHTML = `
+    <div class="ref-url-small">${fileName || urlLabel}</div>
+    <span class="ref-type-tag" style="background:#fff0d4;color:#8a5a00;">⚠️ Revisar</span>
+    <div style="margin:6px 0 4px;">${renderRef(corrected)}</div>
+    <details style="margin-top:6px;">
+      <summary style="font-size:11.5px;color:#8a5a00;cursor:pointer;font-family:sans-serif;">⚠️ ${issues.length} problema(s) detectado(s) — clique para ver</summary>
+      <ul style="font-size:12px;color:#8a5a00;font-family:sans-serif;margin:6px 0 8px 16px;line-height:1.7;">${issuesList}</ul>
+      <textarea style="width:100%;height:55px;font-size:12px;border:1px solid #e2e6d8;border-radius:6px;padding:6px;font-family:monospace;" placeholder="Complete os dados faltantes aqui..."></textarea>
+      <button class="btn-fill-manual" style="margin-top:5px;" onclick="(function(btn){const idx=btn.dataset.idx;completarECorrigir(btn,_pendingRefs[idx].ref,_pendingRefs[idx].missing)})(this)" data-idx="${(()=>{const i=_pendingIdx++;_pendingRefs[i]={ref:escapedRef,missing:issues.join('; ')};return i;})()}">🔄 Corrigir com os dados informados</button>
+    </details>`;
+
+  return false;
+}
+
+function renderRef(text) {
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+function escAttr(s) {
+  return s.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+function clearResults() {
+  if (!confirm('Limpar todo o histórico de referências geradas?')) return;
+  allRefs = [];
+  document.getElementById('refs-output').innerHTML = '';
+  document.getElementById('results-card').style.display = 'none';
+  document.getElementById('results-title').textContent = 'Referências geradas';
+}
+
+function updateResultsHeader() {
+  const ok = allRefs.filter(r=>r.ok).length;
+  document.getElementById('results-title').textContent = `${ok} referência${ok!==1?'s':''} gerada${ok!==1?'s':''}`;
+}
+
+function copyAll(btn) {
+  const text = allRefs.filter(r=>r.ok).map(r=>r.ref.replace(/\*\*(.+?)\*\*/g,'$1')).join('\n\n');
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='✓ Copiado!'; btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='⎘ Copiar tudo';btn.classList.remove('copied');},2500);
+  });
+}
+
+async function exportWord() {
+  const btn = document.getElementById('btn-word');
+  btn.disabled = true; btn.textContent = 'Gerando Word...';
+  try {
+    const refs = allRefs.filter(r=>r.ok);
+    if (!refs.length) { alert('Nenhuma referência para exportar.'); return; }
+    function escXml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    function refToXml(text){
+      const parts = text.split(/(\*\*[^*]+\*\*)/g);
+      const runs = parts.filter(p=>p).map(part=>{
+        const m=part.match(/^\*\*(.+)\*\*$/);
+        if(m) return `<w:r><w:rPr><w:b/><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr><w:t xml:space="preserve">${escXml(m[1])}</w:t></w:r>`;
+        return `<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr><w:t xml:space="preserve">${escXml(part)}</w:t></w:r>`;
+      }).join('');
+      return `<w:p><w:pPr><w:jc w:val="both"/><w:ind w:left="709" w:hanging="709"/><w:spacing w:line="240" w:lineRule="auto" w:after="240"/></w:pPr>${runs}</w:p>`;
+    }
+    const refXmls = refs.map(r=>refToXml(r.ref)).join('\n');
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="400"/></w:pPr><w:r><w:rPr><w:b/><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/></w:rPr><w:t>Refer&#234;ncias Bibliogr&#225;ficas</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:after="240"/></w:pPr><w:r><w:t></w:t></w:r></w:p>
+${refXmls}
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1701" w:right="1134" w:bottom="1134" w:left="1701"/></w:sectPr>
+</w:body></w:document>`;
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+    zip.file('_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+    zip.file('word/document.xml', documentXml);
+    zip.file('word/_rels/document.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
+    const blob = await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download='referencias-abnt.docx'; a.click();
+  } catch(e){alert('Erro ao gerar Word: '+e.message);}
+  btn.disabled=false; btn.textContent='⬇ Baixar Word (.docx)';
+}
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Referências ABNT NBR 6023:2025 | Transformice</title>
+<meta name="description" content="Formate suas referências bibliográficas na norma ABNT NBR 6023:2025 de forma automática e gratuita. Cole o DOI ou link e monte sua lista para o TCC.">
+<meta name="keywords" content="referências ABNT, NBR 6023, gerador de referências, TCC, bibliografia, ABNT 2025, referência bibliográfica automática">
+<meta name="author" content="Transformice">
+<meta property="og:title" content="Gerador de Referências ABNT NBR 6023:2025 | Transformice">
+<meta property="og:description" content="Formate suas referências bibliográficas na norma ABNT NBR 6023:2025 de forma automática e gratuita. Cole o DOI ou link e monte sua lista para o TCC.">
+<meta property="og:type" content="website">
+<meta name="robots" content="index, follow">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HWM13D0G17"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag("js", new Date());
+  gtag("config", "G-HWM13D0G17");
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  :root {
+    --olive: #6c8b2d; --green: #7aa91a; --dark-olive: #606d3d;
+    --dark: #525050; --bg: #f7f8f4; --white: #fff;
+    --border: #e2e6d8; --text: #2d3020; --muted: #7a7f6a;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .container { max-width: 760px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 2rem; }
+  .brand { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; color: var(--olive); margin-bottom: 0.3rem; }
+  .subtitle { font-size: 1rem; color: var(--muted); margin-bottom: 0.6rem; }
+  .norm-tag { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dark-olive); background: #eaf0db; border: 1px solid #cdd8b0; border-radius: 20px; padding: 3px 10px; }
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem; }
+  .card-title { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.75rem; }
+  textarea { width: 100%; height: 150px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; color: var(--text); background: var(--bg); outline: none; resize: vertical; transition: border-color 0.15s; font-family: monospace; line-height: 1.6; }
+  textarea:focus { border-color: var(--olive); background: var(--white); }
+  textarea::placeholder { color: var(--muted); font-family: 'Segoe UI', sans-serif; }
+  input[type=text], input[type=url], select { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s; }
+  input[type=text]:focus, input[type=url]:focus, select:focus { border-color: var(--olive); background: var(--white); }
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+  .btn-generate { width: 100%; padding: 13px; background: var(--olive); color: var(--white); border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 1rem; transition: background 0.15s; }
+  .btn-generate:hover { background: var(--dark-olive); }
+  .btn-generate:disabled { background: #aab890; cursor: not-allowed; }
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-wrap { background: var(--border); border-radius: 4px; height: 6px; margin-top: 1rem; display: none; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--green); border-radius: 4px; transition: width 0.3s ease; width: 0%; }
+  .progress-label { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: center; display: none; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; border-bottom: 2px solid var(--border); }
+  .tab { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--muted); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+  .tab.active { color: var(--olive); border-bottom-color: var(--olive); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Manual form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .form-grid.full { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .form-group .tip { font-size: 11px; color: #aaa; }
+  @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
+
+  /* Results */
+  .results-card { background: var(--white); border: 1px solid #c8dda8; border-radius: var(--radius); padding: 1.5rem; display: none; }
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+  .results-title { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dark-olive); }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-action { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; border: none; border-radius: var(--radius-sm); padding: 7px 16px; cursor: pointer; transition: all 0.15s; }
+  .btn-copy { background: var(--dark-olive); color: white; }
+  .btn-copy:hover { background: var(--olive); }
+  .btn-copy.copied { background: var(--green); }
+  .btn-word { background: #1f5c9e; color: white; }
+  .btn-word:hover { background: #174a80; }
+  .btn-word:disabled { background: #aaa; cursor: not-allowed; }
+  .refs-output { width: 100%; min-height: 80px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; font-size: 13.5px; line-height: 1.8; font-family: Georgia, 'Times New Roman', serif; color: var(--text); background: var(--bg); }
+  .ref-line { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); position: relative; }
+  .ref-line:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .ref-url-small { font-size: 10.5px; color: var(--muted); font-family: monospace; margin-bottom: 4px; }
+  .ref-type-tag { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: 4px; margin-bottom: 5px; font-family: sans-serif; }
+  .tag-lei { background: #fff0d4; color: #8a5a00; }
+  .tag-artigo { background: #d4eaff; color: #00508a; }
+  .tag-tcc { background: #ead4ff; color: #5a008a; }
+  .tag-livro { background: #d4ffd8; color: #006b10; }
+  .tag-web { background: #f0f0f0; color: #555; }
+  .tag-manual { background: #ffeaea; color: #8a0000; }
+  .ref-error { color: #c03030; font-family: sans-serif; font-size: 12px; font-style: italic; margin-bottom: 6px; }
+  .btn-fill-manual { font-size: 11px; padding: 3px 10px; background: none; border: 1px solid #c03030; color: #c03030; border-radius: 4px; cursor: pointer; font-family: sans-serif; margin-top: 4px; transition: all 0.15s; }
+  .btn-fill-manual:hover { background: #fff0f0; }
+  .footer-note { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 1.5rem; line-height: 1.6; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .modal { background: var(--white); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+  .modal-title { font-size: 1rem; font-weight: 700; color: var(--dark); margin-bottom: 0.3rem; }
+  .modal-url { font-size: 11px; color: var(--muted); font-family: monospace; margin-bottom: 1rem; word-break: break-all; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+  .btn-cancel { padding: 8px 16px; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; color: var(--muted); }
+  .btn-cancel:hover { border-color: var(--muted); }
+  .btn-confirm { padding: 8px 18px; background: var(--olive); color: white; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-confirm:hover { background: var(--dark-olive); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="brand">Transformice</div>
+    <p class="subtitle">Gerador de Referências Bibliográficas</p>
+    <div class="norm-tag">✓ ABNT NBR 6023:2025 — Terceira edição</div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('auto',this)">🔗 URL</button>
+      <button class="tab" onclick="switchTab('doi',this)">🔬 DOI</button>
+      <button class="tab" onclick="switchTab('isbn',this)">📚 ISBN</button>
+      <button class="tab" onclick="switchTab('pdf',this)">📄 PDF/Arquivo</button>
+      <button class="tab" onclick="switchTab('converter',this)">🔄 Converter</button>
+      <button class="tab" onclick="switchTab('verificar',this)">✅ Verificar</button>
+      <button class="tab" onclick="switchTab('organizar',this)">📋 Organizar</button>
+      <button class="tab" onclick="switchTab('manual',this)">✏️ Manual</button>
+    </div>
+
+    <!-- TAB AUTO -->
+    <div class="tab-pane active" id="pane-auto">
+      <div class="card-title">Cole as URLs das suas fontes</div>
+      <textarea id="url-input" placeholder="Cole uma URL por linha:
+
+https://www.planalto.gov.br/ccivil_03/leis/l9433.htm
+https://doi.org/10.1590/xyz
+https://acervodigital.ufpr.br/xmlui/handle/1884/58488
+https://www.bbc.com/portuguese/articles/xyz"></textarea>
+      <p class="hint">Uma URL por linha. Tipo detectado automaticamente: legislação, artigo, TCC/dissertação, livro ou página web.</p>
+      <button class="btn-generate" id="gen-btn" onclick="generateRefs()">
+        <span id="gen-label">Gerar referências</span>
+        <div class="spinner" id="spinner"></div>
+      </button>
+      <div class="progress-wrap" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="progress-label" id="progress-label"></div>
+    </div>
+
+    <!-- TAB DOI -->
+    <div class="tab-pane" id="pane-doi">
+      <div class="card-title">Cole os DOIs das suas fontes</div>
+      <textarea id="doi-input" placeholder="Cole um DOI por linha:
+
+10.1590/s1413-81232013000300003
+10.1016/j.envpol.2020.114321
+https://doi.org/10.1038/s41586-021-03819-2"></textarea>
+      <p class="hint">Aceita DOI com ou sem o prefixo https://doi.org/ — metadados via API Crossref, sem precisar de IA.</p>
+      <button class="btn-generate" onclick="generateDOI()">
+        <span>Gerar referências por DOI</span>
+      </button>
+    </div>
+
+    <!-- TAB ISBN -->
+    <div class="tab-pane" id="pane-isbn">
+      <div class="card-title">Cole os ISBNs dos seus livros</div>
+      <textarea id="isbn-input" placeholder="Cole um ISBN por linha (com ou sem hífens):
+
+978-85-7826-000-0
+9788578260000
+0-306-40615-2"></textarea>
+      <p class="hint">ISBN-10 ou ISBN-13, com ou sem hífens — metadados via Open Library e Google Books.</p>
+      <button class="btn-generate" onclick="generateISBN()">
+        <span>Gerar referências por ISBN</span>
+      </button>
+    </div>
+
+    <!-- TAB PDF -->
+    <div class="tab-pane" id="pane-pdf">
+      <div class="card-title">Gerar referência a partir de PDF ou arquivo</div>
+      <div id="pdf-dropzone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:2.5rem 1rem;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg);" onclick="document.getElementById('pdf-file').click()" ondragover="pdfDragOver(event)" ondragleave="pdfDragLeave(event)" ondrop="pdfDrop(event)">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">📄</div>
+        <div style="font-size:14px;font-weight:600;color:var(--dark);margin-bottom:4px;">Clique ou arraste o arquivo aqui</div>
+        <div style="font-size:12px;color:var(--muted);">PDF, DOCX ou TXT — o sistema extrai os metadados automaticamente</div>
+        <input type="file" id="pdf-file" accept=".pdf,.docx,.txt" style="display:none;" onchange="pdfFileSelected(this)">
+      </div>
+      <div id="pdf-file-info" style="display:none;margin-top:10px;padding:10px 14px;background:#eaf0db;border-radius:var(--radius-sm);font-size:13px;color:var(--dark-olive);font-family:monospace;"></div>
+      <div style="margin-top:12px;">
+        <div class="form-group">
+          <label>Tipo de documento (opcional — detectado automaticamente)</label>
+          <select id="pdf-tipo">
+            <option value="auto">Detectar automaticamente</option>
+            <option value="academico">TCC / Dissertação / Tese</option>
+            <option value="artigo">Artigo científico</option>
+            <option value="livro">Livro / Relatório</option>
+            <option value="legislacao">Legislação</option>
+            <option value="web">Documento técnico / Outro</option>
+          </select>
+        </div>
+      </div>
+      <div id="ocr-progress" style="display:none;margin-top:12px;">
+        <div style="font-size:12px;font-weight:600;color:var(--dark-olive);margin-bottom:6px;" id="ocr-status">Iniciando OCR...</div>
+        <div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden;">
+          <div id="ocr-bar" style="height:100%;background:var(--amber);border-radius:4px;transition:width 0.3s ease;width:0%;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;" id="ocr-detail"></div>
+      </div>
+      <canvas id="pdf-canvas" style="display:none;max-width:100%;margin-top:10px;border:1px solid var(--border);border-radius:var(--radius-sm);"></canvas>
+      <button class="btn-generate" id="pdf-btn" onclick="generateFromPDF()" style="margin-top:1rem;" disabled>
+        <span id="pdf-label">Selecione um arquivo primeiro</span>
+      </button>
+    </div>
+
+    <!-- TAB CONVERTER -->
+    <div class="tab-pane" id="pane-converter">
+      <div class="card-title">Converter entre normas bibliográficas</div>
+      <div class="form-grid" style="margin-bottom:10px; grid-template-columns:1fr 1fr; display:grid; gap:10px;">
+        <div class="form-group">
+          <label>Norma de origem</label>
+          <select id="conv-from">
+            <option value="ABNT">ABNT NBR 6023:2025</option>
+            <option value="APA">APA 7ª edição</option>
+            <option value="Vancouver">Vancouver</option>
+            <option value="IEEE">IEEE</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Norma de destino</label>
+          <select id="conv-to">
+            <option value="APA">APA 7ª edição</option>
+            <option value="ABNT">ABNT NBR 6023:2025</option>
+            <option value="Vancouver">Vancouver</option>
+            <option value="IEEE">IEEE</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Cole as referências para converter (uma por linha em branco)</label>
+        <textarea id="conv-input" style="height:180px;" placeholder="Cole aqui as referências na norma de origem. Separe cada referência por uma linha em branco."></textarea>
+      </div>
+      <button class="btn-generate" onclick="convertRefs()">
+        <span>Converter referências</span>
+      </button>
+    </div>
+
+    <!-- TAB VERIFICAR -->
+    <div class="tab-pane" id="pane-verificar">
+      <div class="card-title">Verificar referências ABNT</div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Cole as referências para verificar (uma por linha em branco)</label>
+        <textarea id="verif-input" style="height:200px;" placeholder="Cole aqui as referências que deseja verificar. Separe cada uma por uma linha em branco.
+
+Exemplo:
+SILVA, João. Gestão ambiental. São Paulo: Atlas, 2020.
+
+BRASIL. Lei nº 9.433, de 8 de janeiro de 1997..."></textarea>
+      </div>
+      <button class="btn-generate" onclick="verificarRefs()">
+        <span>Verificar referências</span>
+      </button>
+    </div>
+
+    <!-- TAB ORGANIZAR -->
+    <div class="tab-pane" id="pane-organizar">
+      <div class="card-title">Organizar bibliografia para TCC / Dissertação</div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Cole todas as suas referências (uma por linha em branco)</label>
+        <textarea id="org-input" style="height:200px;" placeholder="Cole aqui todas as referências do seu trabalho. Serão organizadas em ordem alfabética conforme ABNT, duplicatas removidas e formatação padronizada."></textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Ordenação</label>
+        <select id="org-order">
+          <option value="alfabetica">Alfabética (sistema autor-data — ABNT 9.1)</option>
+          <option value="numerica">Numérica (sistema numérico — ABNT 9.2)</option>
+        </select>
+      </div>
+      <button class="btn-generate" onclick="organizarRefs()">
+        <span>Organizar bibliografia</span>
+      </button>
+    </div>
+
+    <!-- TAB MANUAL -->
+    <div class="tab-pane" id="pane-manual">
+      <div class="card-title">Preencha os dados manualmente</div>
+
+      <div class="form-grid full" style="margin-bottom:10px;">
+        <div class="form-group">
+          <label>Tipo de documento</label>
+          <select id="m-tipo" onchange="updateManualForm()">
+            <option value="web">Página web</option>
+            <option value="legislacao">Legislação (lei, decreto, portaria...)</option>
+            <option value="artigo">Artigo científico</option>
+            <option value="academico">TCC / Dissertação / Tese</option>
+            <option value="livro">Livro</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="manual-fields"></div>
+
+      <div class="form-grid full" style="margin-top:10px;">
+        <div class="form-group">
+          <label>URL (opcional)</label>
+          <input type="url" id="m-url" placeholder="https://..." />
+        </div>
+      </div>
+
+      <button class="btn-generate" onclick="generateManual()">
+        <span>Gerar referência</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-card" id="results-card">
+    <div class="results-header">
+      <div class="results-title" id="results-title">Referências geradas</div>
+      <div class="btn-row">
+        <button class="btn-action btn-copy" onclick="copyAll(this)">⎘ Copiar tudo</button>
+        <button class="btn-action btn-word" id="btn-word" onclick="exportWord()">⬇ Baixar Word (.docx)</button>
+      </div>
+    </div>
+    <div class="refs-output" id="refs-output"></div>
+  </div>
+
+  <p class="footer-note">Transformice · Referências geradas com IA conforme ABNT NBR 6023:2025 · Verifique sempre os metadados</p>
+  <p class="footer-note" style="margin-top:6px;">
+    <a href="/faq.html" style="color:var(--olive);">FAQ</a> ·
+    <a href="/blog/" style="color:var(--olive);">Blog</a> ·
+    <a href="mailto:contato@transformice.net.br" style="color:var(--olive);">contato@transformice.net.br</a>
+  </p>
+</div>
+
+<!-- MODAL preenchimento manual para erro -->
+<div class="modal-overlay" id="modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-title">Preencher dados manualmente</div>
+    <div class="modal-url" id="modal-url"></div>
+    <div class="form-grid full" style="margin-bottom:10px;">
+      <div class="form-group">
+        <label>Tipo de documento</label>
+        <select id="modal-tipo" onchange="updateModalForm()">
+          <option value="web">Página web</option>
+          <option value="legislacao">Legislação</option>
+          <option value="artigo">Artigo científico</option>
+          <option value="academico">TCC / Dissertação / Tese</option>
+          <option value="livro">Livro</option>
+        </select>
+      </div>
+    </div>
+    <div id="modal-fields"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmManual()">Gerar referência</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const WORKER_PROXY = "https://transformice.jemartinsw.workers.dev/";
+
+// ── Detecção de tipo ─────────────────────────────────────────────────────────
+function detectType(url) {
+  const u = url.toLowerCase();
+  if (u.split('?')[0].split('#')[0].endsWith('.pdf')) return 'pdf_remoto';
+  if (/youtube\.com|youtu\.be/.test(u)) return 'video';
+  if (/news\.google\.com|google\.com\/url|bit\.ly|tinyurl\.com|t\.co\//.test(u)) return 'redirect';
+  if (/instagram\.com/.test(u)) return 'instagram';
+  if (/facebook\.com|fb\.com/.test(u)) return 'facebook';
+  if (/twitter\.com|x\.com/.test(u)) return 'twitter';
+  if (/linkedin\.com/.test(u)) return 'linkedin';
+  if (/tiktok\.com/.test(u)) return 'tiktok';
+  if (/abnt\.org|iso\.org|iec\.ch|abntcatalogo|norma.abnt|nbr[-_\s]\d|iso[-_\s]\d/.test(u)) return 'norma';
+  if (/decreto|portaria|resolucao|resolução|instrucao|instrução|medida.provisoria|emenda|legisla[cç]|diario.oficial|jusbrasil|planalto\.gov|camara\.leg|senado\.leg|casa.civil|lexml|atos.normativos|lei[-_\/\s]\d/.test(u)) return 'legislacao';
+  if (/doi\.org|scielo|pubmed|periodico|revista|journal|repositorio.*artigo/.test(u)) return 'artigo';
+  if (/tcc|dissertac|disserta|tese|monografia|trabalho.conclus|bdtd|repositorio|acervo.digital|lume\.ufrgs|dspace|handle/.test(u)) return 'academico';
+  if (/books\.google|isbn|editora|livraria/.test(u)) return 'livro';
+  if (/relatorio|plano.diretor|produto|diagnostico|consultoria|geotecn|laudo|estudo/.test(u)) return 'relatorio';
+  return 'web';
+}
+
+// ── Prompts especializados ───────────────────────────────────────────────────
+const PROMPTS = {
+  legislacao: `Você é especialista em ABNT NBR 6023:2025, seção 7.11 (Documento jurídico - Legislação).
+Elementos OBRIGATÓRIOS para legislação:
+1. JURISDIÇÃO em maiúsculas (BRASIL. / PARANÁ. / SÃO PAULO (Município). etc.)
+2. Tipo + nº + data completa (Decreto nº 4.435, de 29 de junho de 2016.)
+3. Ementa completa transcrita (o texto que descreve o que a norma trata)
+4. Local: Órgão publicador real (não o site que hospeda), ano.
+5. Disponível em: URL. Acesso em: data.
+FORMATO: JURISDIÇÃO. Tipo nº X.XXX, de DD de mês de AAAA. Ementa. Local: Órgão, ano. Disponível em: URL. Acesso em: DD mês. AAAA.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. Sem explicações.`,
+
+  artigo: `Você é especialista em ABNT NBR 6023:2025, seção 7.7.5/7.7.6 (Artigo científico).
+Elementos OBRIGATÓRIOS:
+1. SOBRENOME, Nome. (até 3 autores: todos; 4+: primeiro + et al.)
+2. Título do artigo (sem negrito)
+3. **Título do Periódico** em negrito
+4. Local, v. X, n. X, p. XX-XX, mês. ano.
+5. DOI se disponível. Disponível em: URL. Acesso em: data.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. **negrito** só no título do periódico.`,
+
+  academico: `Você é especialista em ABNT NBR 6023:2025, seção 7.1.2 (Trabalho acadêmico).
+Elementos OBRIGATÓRIOS:
+1. SOBRENOME, Nome.
+2. **Título**: subtítulo.
+3. Ano.
+4. Tipo (Grau em Área) – Unidade, Instituição, Cidade, ano.
+5. Disponível em: URL. Acesso em: data.
+EXEMPLO: SILVA, Ana. **Gestão de recursos hídricos**. 2019. Dissertação (Mestrado em Eng. Ambiental) – Setor de Tecnologia, UFPR, Curitiba, 2019. Disponível em: URL. Acesso em: 8 jun. 2026.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. **negrito** só no título.`,
+
+  livro: `Você é especialista em ABNT NBR 6023:2025, seção 7.1/7.2 (Livro/Monografia).
+Elementos OBRIGATÓRIOS:
+1. SOBRENOME, Nome.
+2. **Título**: subtítulo.
+3. Edição (se houver).
+4. Local: Editora, ano.
+5. ISBN se disponível. Disponível em: URL (se online). Acesso em: data.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. **negrito** só no título.`,
+
+  web: `Você é especialista em ABNT NBR 6023:2025, seção 7.20 (Documento eletrônico).
+Elementos OBRIGATÓRIOS:
+1. AUTOR ou ORGANIZAÇÃO EM MAIÚSCULAS (sem autor: TÍTULO EM MAIÚSCULAS)
+2. **Título da página**
+3. Local ou [S. l.], data.
+4. Disponível em: URL. Acesso em: data.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. **negrito** só no título.`,
+
+  norma: `Você é especialista em ABNT NBR 6023:2025.
+Para NORMAS TÉCNICAS (ABNT NBR, ISO, IEC, ASTM, etc.) os elementos OBRIGATÓRIOS são:
+1. NOME COMPLETO DA ORGANIZAÇÃO EM MAIÚSCULAS (ex: ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS.)
+2. **SIGLA NÚMERO**: título completo em minúsculas
+3. Local: cidade sede
+4. Editora: sigla da organização
+5. Ano
+Formato: ORGANIZAÇÃO. **SIGLA NÚMERO**: título em minúsculas. Local: Sigla, ano.
+Exemplo: ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. **ABNT NBR 6023**: informação e documentação — referências — elaboração. Rio de Janeiro: ABNT, 2025.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Responda APENAS com a referência. **negrito** só na sigla+número.`
+};
+
+const TYPE_LABELS = {
+  legislacao: { label: 'Legislação', css: 'tag-lei' },
+  artigo:     { label: 'Artigo científico', css: 'tag-artigo' },
+  academico:  { label: 'Trab. acadêmico', css: 'tag-tcc' },
+  livro:      { label: 'Livro', css: 'tag-livro' },
+  web:        { label: 'Página web', css: 'tag-web' },
+  norma:      { label: 'Norma técnica', css: 'tag-artigo' },
+  relatorio:  { label: 'Relatório técnico', css: 'tag-web' },
+  video:      { label: 'Vídeo (YouTube)', css: 'tag-tcc' },
+  pdf_remoto: { label: 'PDF remoto', css: 'tag-tcc' },
+  redirect:   { label: 'Link de redirecionamento', css: 'tag-lei' },
+  instagram:  { label: 'Instagram', css: 'tag-tcc' },
+  facebook:   { label: 'Facebook', css: 'tag-tcc' },
+  twitter:    { label: 'Twitter/X', css: 'tag-tcc' },
+  linkedin:   { label: 'LinkedIn', css: 'tag-tcc' },
+  tiktok:     { label: 'TikTok', css: 'tag-tcc' },
+  manual:     { label: 'Manual', css: 'tag-manual' }
+};
+
+// ── Campos do formulário manual por tipo ─────────────────────────────────────
+const MANUAL_FIELDS = {
+  web: [
+    { id:'autor', label:'Autor / Organização', tip:'Ex: BRASIL. ou SILVA, João.' },
+    { id:'titulo', label:'Título da página', tip:'' },
+    { id:'local', label:'Local', tip:'Cidade ou deixe em branco para [S. l.]' },
+    { id:'data', label:'Data de publicação', tip:'Ex: 2023 ou 15 jan. 2023' },
+  ],
+  legislacao: [
+    { id:'jurisdicao', label:'Jurisdição', tip:'Ex: BRASIL. / PARANÁ. / SÃO PAULO (Município).' },
+    { id:'tipo_ato', label:'Tipo + número + data', tip:'Ex: Decreto nº 4.435, de 29 de junho de 2016.' },
+    { id:'ementa', label:'Ementa (texto completo)', tip:'O que a norma declara ou dispõe' },
+    { id:'local', label:'Local', tip:'Ex: Brasília / Curitiba' },
+    { id:'orgao', label:'Órgão publicador', tip:'Ex: Casa Civil / Assembleia Legislativa' },
+    { id:'ano', label:'Ano', tip:'' },
+  ],
+  artigo: [
+    { id:'autores', label:'Autor(es)', tip:'SOBRENOME, Nome; SOBRENOME2, Nome2' },
+    { id:'titulo', label:'Título do artigo', tip:'' },
+    { id:'periodico', label:'Título do periódico', tip:'' },
+    { id:'local', label:'Local', tip:'' },
+    { id:'volume', label:'Volume', tip:'Ex: v. 12' },
+    { id:'numero', label:'Número', tip:'Ex: n. 3' },
+    { id:'paginas', label:'Páginas', tip:'Ex: p. 45-60' },
+    { id:'data', label:'Mês e ano', tip:'Ex: mar. 2022' },
+    { id:'doi', label:'DOI (opcional)', tip:'Ex: 10.1590/xyz' },
+  ],
+  academico: [
+    { id:'autor', label:'Autor', tip:'SOBRENOME, Nome' },
+    { id:'titulo', label:'Título', tip:'' },
+    { id:'subtitulo', label:'Subtítulo (opcional)', tip:'' },
+    { id:'ano', label:'Ano de defesa', tip:'' },
+    { id:'tipo_trab', label:'Tipo do trabalho', tip:'Ex: Tese / Dissertação / Trabalho de Conclusão de Curso' },
+    { id:'grau', label:'Grau e área', tip:'Ex: Doutorado em Engenharia Ambiental' },
+    { id:'unidade', label:'Unidade acadêmica', tip:'Ex: Setor de Tecnologia' },
+    { id:'instituicao', label:'Instituição', tip:'Ex: Universidade Federal do Paraná' },
+    { id:'cidade', label:'Cidade', tip:'' },
+  ],
+  livro: [
+    { id:'autores', label:'Autor(es)', tip:'SOBRENOME, Nome' },
+    { id:'titulo', label:'Título', tip:'' },
+    { id:'subtitulo', label:'Subtítulo (opcional)', tip:'' },
+    { id:'edicao', label:'Edição (opcional)', tip:'Ex: 3' },
+    { id:'local', label:'Local', tip:'' },
+    { id:'editora', label:'Editora', tip:'' },
+    { id:'ano', label:'Ano', tip:'' },
+    { id:'isbn', label:'ISBN (opcional)', tip:'' },
+  ]
+};
+
+function buildFields(tipo, containerId) {
+  const fields = MANUAL_FIELDS[tipo] || MANUAL_FIELDS.web;
+  const container = document.getElementById(containerId);
+  const html = fields.map(f => `
+    <div class="form-group" style="margin-bottom:8px;">
+      <label for="${containerId}-${f.id}">${f.label}</label>
+      ${f.tip ? `<span class="tip">${f.tip}</span>` : ''}
+      <input type="text" id="${containerId}-${f.id}" placeholder="${f.tip||''}" />
+    </div>`).join('');
+  container.innerHTML = `<div class="form-grid full">${html}</div>`;
+}
+
+function updateManualForm() {
+  buildFields(document.getElementById('m-tipo').value, 'manual-fields');
+}
+
+function updateModalForm() {
+  buildFields(document.getElementById('modal-tipo').value, 'modal-fields');
+}
+
+// Inicializar form manual
+updateManualForm();
+
+
+
+
+
+
+// ── Gerar referência de PDF remoto com dados manuais ─────────────────────────
+async function gerarRefPDFRemoto(btn, url, ts) {
+  const tipo   = document.getElementById(`pdf-rem-tipo-${ts}`)?.value;
+  const autor  = document.getElementById(`pdf-rem-autor-${ts}`)?.value.trim();
+  const titulo = document.getElementById(`pdf-rem-titulo-${ts}`)?.value.trim();
+  const local  = document.getElementById(`pdf-rem-local-${ts}`)?.value.trim();
+  const orgao  = document.getElementById(`pdf-rem-orgao-${ts}`)?.value.trim();
+  const ano    = document.getElementById(`pdf-rem-ano-${ts}`)?.value.trim();
+
+  if (!autor || !titulo) {
+    alert('Preencha pelo menos o Autor/Organização e o Título.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Gerando...';
+
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  const prompt = `${PROMPTS[tipo] || PROMPTS.web}
+
+Dados fornecidos pelo usuário:
+Autor/Organização: ${autor}
+Título: ${titulo}
+Local: ${local || '[S. l.]'}
+Órgão/Editora: ${orgao || '[s. n.]'}
+Ano: ${ano || '[s. d.]'}
+URL: ${url}
+Data de acesso: ${accessDate}
+
+Formate a referência completa conforme ABNT NBR 6023:2025. Use **negrito** no título.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez. Ponto final obrigatório.
+Responda APENAS com a referência. Sem explicações.`;
+
+  try {
+    const ref = await callGroqManual(prompt);
+    const container = btn.closest('.ref-line');
+    const corrected = autoCorrect(ref, tipo);
+    allRefs.push({url, ref: corrected, type: tipo, ok: true});
+    container.innerHTML = `
+      <div class="ref-url-small">${url}</div>
+      <span class="ref-type-tag tag-tcc">PDF remoto</span>
+      <div>${renderRef(corrected)}</div>`;
+    updateResultsHeader();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✓ Gerar referência';
+    alert('Erro: ' + e.message);
+  }
+}
+
+// ── Gerar referência a partir de URL original (após redirecionador) ──────────
+async function gerarDeRedirect(btn, ts) {
+  const newUrl = document.getElementById(`redir-url-${ts}`)?.value.trim();
+  if (!newUrl || !newUrl.startsWith('http')) {
+    alert('Cole uma URL válida começando com http://  ou https://');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Gerando...';
+
+  const container = btn.closest('.ref-line');
+  const type = detectType(newUrl);
+  const {label, css} = TYPE_LABELS[type] || TYPE_LABELS.web;
+
+  container.innerHTML = `
+    <div class="ref-url-small">${newUrl}</div>
+    <span class="ref-type-tag ${css}">${label}</span>
+    <div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Gerando referência...</div>`;
+
+  try {
+    let ref;
+    if (type === 'video') {
+      ref = await generateYouTubeRef(newUrl);
+    } else {
+      ref = await callGroq(newUrl, type);
+    }
+    await processAndValidate(ref, type, newUrl, container, newUrl);
+  } catch(e) {
+    container.innerHTML = `
+      <div class="ref-url-small">${newUrl}</div>
+      <span class="ref-type-tag ${css}">${label}</span>
+      <div class="ref-error">Erro: ${e.message}</div>`;
+  }
+}
+
+// ── Referência de rede social com formulário manual ──────────────────────────
+async function gerarRefRedeSocial(btn, url, rede, ts) {
+  const autor  = document.getElementById(`soc-autor-${ts}`)?.value.trim();
+  const perfil = document.getElementById(`soc-perfil-${ts}`)?.value.trim();
+  const titulo = document.getElementById(`soc-titulo-${ts}`)?.value.trim();
+  const data   = document.getElementById(`soc-data-${ts}`)?.value.trim();
+  const local  = document.getElementById(`soc-local-${ts}`)?.value.trim() || '[S. l.]';
+
+  if (!autor || !titulo) {
+    alert('Preencha pelo menos o Autor e o Texto/título do post.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Gerando...';
+
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  // Formatar data de publicação com mês abreviado
+  let dataFormatada = data || '[s. d.]';
+  if (data) {
+    const mesesExtenso = {
+      'janeiro':'jan.','fevereiro':'fev.','março':'mar.','abril':'abr.',
+      'maio':'maio','junho':'jun.','julho':'jul.','agosto':'ago.',
+      'setembro':'set.','outubro':'out.','novembro':'nov.','dezembro':'dez.'
+    };
+    // Converter "13 de maio de 2025" → "13 maio 2025" ou "13 maio 2025" → ok
+    dataFormatada = data
+      .replace(/\s+de\s+/gi, ' ')
+      .replace(/(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/gi,
+        m => mesesExtenso[m.toLowerCase()] || m);
+  }
+
+  const autorMaiusc = autor.toUpperCase();
+  const perfilStr = perfil ? `${rede}: ${perfil}. ` : '';
+
+  // Montar referência conforme ABNT NBR 6023:2025, seção 8.7.3
+  const ref = `${autorMaiusc}. **${titulo}**. ${local}, ${dataFormatada}. ${perfilStr}Disponível em: ${url}. Acesso em: ${accessDate}.`;
+
+  const container = btn.closest('.ref-line');
+
+  // Atualizar o allRefs
+  const idx = allRefs.findIndex(r => r.url === url && !r.ok);
+  if (idx !== -1) { allRefs[idx].ref = ref; allRefs[idx].ok = true; }
+  else allRefs.push({url, ref, type: rede.toLowerCase(), ok: true});
+
+  container.innerHTML = `
+    <div class="ref-url-small">${url}</div>
+    <span class="ref-type-tag tag-tcc">${rede}</span>
+    <div>${renderRef(ref)}</div>`;
+
+  updateResultsHeader();
+}
+
+// ── YouTube via Data API v3 ──────────────────────────────────────────────────
+const YOUTUBE_KEY = "AIzaSyAUIE1jFnmxnvCNLhs8wJKB89MadrJNO2k";
+
+function extractVideoId(url) {
+  const patterns = [
+    /[?&]v=([^&#]+)/,
+    /youtu\.be\/([^?&#]+)/,
+    /youtube\.com\/embed\/([^?&#]+)/,
+    /youtube\.com\/shorts\/([^?&#]+)/
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+async function generateYouTubeRef(url) {
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  const videoId = extractVideoId(url);
+  if (!videoId) throw new Error('ID do vídeo não identificado na URL');
+
+  // Buscar via YouTube Data API v3
+  const apiUrl = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=snippet&key=${YOUTUBE_KEY}`;
+  const resp = await fetch(apiUrl);
+  if (!resp.ok) throw new Error(`Erro na YouTube API: HTTP ${resp.status}`);
+
+  const data = await resp.json();
+  if (!data.items || data.items.length === 0) throw new Error('Vídeo não encontrado ou privado');
+
+  const snippet = data.items[0].snippet;
+  const canal = (snippet.channelTitle || 'CANAL NÃO IDENTIFICADO').toUpperCase();
+  const titulo = snippet.title || 'Título não identificado';
+
+  // Formatar data de publicação
+  let dataPub = '[s. d.]';
+  if (snippet.publishedAt) {
+    const d = new Date(snippet.publishedAt);
+    const dia = d.getDate();
+    const mes = months[d.getMonth()];
+    const ano = d.getFullYear();
+    dataPub = `${dia} ${mes} ${ano}`;
+  }
+
+  // Montar referência conforme ABNT NBR 6023:2025, seção 7.13.2
+  const ref = `${canal}. **${titulo}**. [S. l.]: YouTube, ${dataPub}. 1 vídeo online. Disponível em: ${url}. Acesso em: ${accessDate}.`;
+  return ref;
+}
+
+// ── DOI via Crossref API ─────────────────────────────────────────────────────
+async function generateDOI() {
+  const raw = document.getElementById('doi-input').value;
+  const dois = raw.split('\n').map(d => d.trim()).filter(Boolean).map(d => {
+    return d.replace(/^https?:\/\/doi\.org\//i, '').trim();
+  }).filter(Boolean);
+  if (!dois.length) { alert('Cole pelo menos um DOI válido.'); return; }
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  for (const doi of dois) {
+    const div = document.createElement('div');
+    div.className = 'ref-line';
+    div.innerHTML = `<div class="ref-url-small">DOI: ${doi}</div><span class="ref-type-tag tag-artigo">Artigo científico</span><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Buscando metadados...</div>`;
+    output.appendChild(div);
+
+    try {
+      const meta = await fetchCrossref(doi);
+      const ref = formatDOIRef(meta, doi);
+      allRefs.push({url: `https://doi.org/${doi}`, ref, type:'artigo', ok:true});
+      div.innerHTML = `<div class="ref-url-small">DOI: ${doi}</div><span class="ref-type-tag tag-artigo">Artigo científico</span><div>${renderRef(ref)}</div>`;
+    } catch(e) {
+      allRefs.push({url: doi, ref:'', type:'artigo', ok:false});
+      div.innerHTML = `<div class="ref-url-small">DOI: ${doi}</div><span class="ref-type-tag tag-artigo">Artigo científico</span><div class="ref-error">Erro: ${e.message}</div><button class="btn-fill-manual" onclick="openModal('https://doi.org/${doi}')">✏️ Preencher manualmente</button>`;
+    }
+  }
+  updateResultsHeader();
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function fetchCrossref(doi) {
+  const resp = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`, {
+    headers: {'User-Agent': 'Transformice/1.0 (https://jemartinsw.github.io/transformice)'}
+  });
+  if (!resp.ok) throw new Error(`DOI não encontrado (HTTP ${resp.status})`);
+  const data = await resp.json();
+  return data.message;
+}
+
+function formatDOIRef(m, doi) {
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  // Autores
+  let autores = '';
+  if (m.author && m.author.length) {
+    const formatAuthor = a => {
+      const sobrenome = (a.family || '').toUpperCase();
+      const nome = a.given || '';
+      return sobrenome && nome ? `${sobrenome}, ${nome}` : sobrenome || nome;
+    };
+    if (m.author.length <= 3) {
+      autores = m.author.map(formatAuthor).join('; ') + '.';
+    } else {
+      autores = formatAuthor(m.author[0]) + ' et al.';
+    }
+  }
+
+  // Título
+  const titulo = m.title?.[0] || '';
+
+  // Periódico
+  const periodico = m['container-title']?.[0] || '';
+
+  // Local
+  const local = m['publisher-location'] || '';
+
+  // Volume, número, páginas
+  const volume = m.volume ? `v. ${m.volume}` : '';
+  const numero = m.issue ? `n. ${m.issue}` : '';
+  const paginas = m.page ? `p. ${m.page}` : '';
+
+  // Data
+  let dataRef = '';
+  const dateArr = m.published?.['date-parts']?.[0] || m['published-print']?.['date-parts']?.[0] || m['published-online']?.['date-parts']?.[0];
+  if (dateArr) {
+    const ano = dateArr[0];
+    const mes = dateArr[1] ? months[dateArr[1]-1] : '';
+    dataRef = mes ? `${mes} ${ano}` : `${ano}`;
+  }
+
+  // Montar referência
+  const partes = [local, volume, numero, paginas, dataRef].filter(Boolean).join(', ');
+  let ref = '';
+  if (autores) ref += autores + ' ';
+  ref += titulo + '. ';
+  if (periodico) ref += `**${periodico}**`;
+  if (partes) ref += `, ${partes}`;
+  ref += '.';
+  ref += ` DOI: ${doi}.`;
+  ref += ` Disponível em: https://doi.org/${doi}. Acesso em: ${accessDate}.`;
+
+  return ref;
+}
+
+// ── ISBN via Open Library + Google Books ─────────────────────────────────────
+async function generateISBN() {
+  const raw = document.getElementById('isbn-input').value;
+  const isbns = raw.split('\n').map(s => s.trim().replace(/[^0-9X]/gi,'')).filter(s => s.length >= 10);
+  if (!isbns.length) { alert('Cole pelo menos um ISBN válido.'); return; }
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  for (const isbn of isbns) {
+    const div = document.createElement('div');
+    div.className = 'ref-line';
+    div.innerHTML = `<div class="ref-url-small">ISBN: ${isbn}</div><span class="ref-type-tag tag-livro">Livro</span><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Buscando metadados...</div>`;
+    output.appendChild(div);
+
+    try {
+      const meta = await fetchISBN(isbn);
+      const ref = formatISBNRef(meta, isbn);
+      allRefs.push({url: `ISBN:${isbn}`, ref, type:'livro', ok:true});
+      div.innerHTML = `<div class="ref-url-small">ISBN: ${isbn}</div><span class="ref-type-tag tag-livro">Livro</span><div>${renderRef(ref)}</div>`;
+    } catch(e) {
+      allRefs.push({url: isbn, ref:'', type:'livro', ok:false});
+      div.innerHTML = `<div class="ref-url-small">ISBN: ${isbn}</div><span class="ref-type-tag tag-livro">Livro</span><div class="ref-error">Erro: ${e.message}</div><button class="btn-fill-manual" onclick="openModal('ISBN:${isbn}')">✏️ Preencher manualmente</button>`;
+    }
+  }
+  updateResultsHeader();
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function fetchISBN(isbn) {
+  // Tentar Open Library primeiro
+  try {
+    const resp = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+    const data = await resp.json();
+    const book = data[`ISBN:${isbn}`];
+    if (book && book.title) return { source: 'openlibrary', ...book };
+  } catch(e) {}
+
+  // Fallback: Google Books
+  const resp2 = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+  const data2 = await resp2.json();
+  if (data2.totalItems > 0) {
+    const vol = data2.items[0].volumeInfo;
+    return { source: 'google', ...vol };
+  }
+  throw new Error('ISBN não encontrado nas bases Open Library e Google Books.');
+}
+
+function formatISBNRef(m, isbn) {
+  let autores = '', titulo = '', subtitulo = '', edicao = '', local = '', editora = '', ano = '';
+
+  if (m.source === 'openlibrary') {
+    // Autores
+    if (m.authors?.length) {
+      const formatA = a => {
+        const parts = (a.name || '').split(' ');
+        if (parts.length < 2) return (a.name||'').toUpperCase();
+        const sob = parts[parts.length-1].toUpperCase();
+        const nome = parts.slice(0,-1).join(' ');
+        return `${sob}, ${nome}`;
+      };
+      autores = m.authors.length <= 3
+        ? m.authors.map(formatA).join('; ') + '.'
+        : formatA(m.authors[0]) + ' et al.';
+    }
+    titulo = m.title || '';
+    edicao = m.edition_name ? m.edition_name.replace(/[^0-9]/g,'') : '';
+    local = m.publish_places?.[0]?.name || '';
+    editora = m.publishers?.[0]?.name || '';
+    ano = m.publish_date?.match(/\d{4}/)?.[0] || '';
+  } else {
+    // Google Books
+    if (m.authors?.length) {
+      const formatA = name => {
+        const parts = name.split(' ');
+        if (parts.length < 2) return name.toUpperCase();
+        const sob = parts[parts.length-1].toUpperCase();
+        const nome = parts.slice(0,-1).join(' ');
+        return `${sob}, ${nome}`;
+      };
+      autores = m.authors.length <= 3
+        ? m.authors.map(formatA).join('; ') + '.'
+        : formatA(m.authors[0]) + ' et al.';
+    }
+    titulo = m.title || '';
+    subtitulo = m.subtitle || '';
+    local = m.publishedDate ? '' : '';
+    editora = m.publisher || '';
+    ano = m.publishedDate?.match(/\d{4}/)?.[0] || '';
+  }
+
+  let ref = '';
+  if (autores) ref += autores + ' ';
+  ref += `**${titulo}**`;
+  if (subtitulo) ref += `: ${subtitulo}`;
+  ref += '.';
+  if (edicao) ref += ` ${edicao}. ed.`;
+  const pubPartes = [local||'[S. l.]', editora, ano].filter(Boolean);
+  if (pubPartes.length) ref += ` ${pubPartes.join(': ')}.`;
+  ref += ` ISBN ${isbn}.`;
+
+  return ref;
+}
+
+
+// ── CONVERTER entre normas ───────────────────────────────────────────────────
+async function convertRefs() {
+  const from = document.getElementById('conv-from').value;
+  const to = document.getElementById('conv-to').value;
+  const raw = document.getElementById('conv-input').value.trim();
+  if (!raw) { alert('Cole pelo menos uma referência para converter.'); return; }
+  if (from === to) { alert('Selecione normas diferentes para converter.'); return; }
+
+  const refs = raw.split(/\n\s*\n/).map(r => r.trim()).filter(Boolean);
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  for (const ref of refs) {
+    const div = document.createElement('div');
+    div.className = 'ref-line';
+    div.innerHTML = `<span class="ref-type-tag" style="background:#e8d4ff;color:#5a008a;">🔄 ${from} → ${to}</span><div style="color:var(--muted);font-family:sans-serif;font-size:12px;margin-bottom:5px;font-style:italic;">${ref.substring(0,80)}...</div><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Convertendo...</div>`;
+    output.appendChild(div);
+
+    try {
+      const prompt = `Você é especialista em normas bibliográficas internacionais e brasileiras.
+
+Converta a referência abaixo de ${from} para ${to}.
+
+Referência original (${from}):
+${ref}
+
+Regras:
+- Mantenha todos os dados bibliográficos (autores, título, editora, ano, etc.)
+- Aplique EXATAMENTE a formatação da norma ${to}
+- Se for ABNT: siga a NBR 6023:2025, título em **negrito**
+- Se for APA: 7ª edição, sem negrito
+- Se for Vancouver: numerado, sobrenome + iniciais
+- Se for IEEE: numerado entre colchetes
+
+Responda APENAS com a referência convertida. Sem explicações.`;
+
+      const converted = await callGroqManual(prompt);
+      allRefs.push({url: `(${from}→${to})`, ref: converted, type:'manual', ok:true});
+      div.innerHTML = `<span class="ref-type-tag" style="background:#e8d4ff;color:#5a008a;">🔄 ${from} → ${to}</span>
+        <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">Original: ${ref.substring(0,80)}...</div>
+        <div>${renderRef(converted)}</div>`;
+    } catch(e) {
+      div.innerHTML = `<span class="ref-type-tag" style="background:#e8d4ff;color:#5a008a;">🔄 ${from} → ${to}</span><div class="ref-error">Erro: ${e.message}</div>`;
+    }
+  }
+  updateResultsHeader();
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── VERIFICAR referências ABNT ───────────────────────────────────────────────
+async function verificarRefs() {
+  const raw = document.getElementById('verif-input').value.trim();
+  if (!raw) { alert('Cole pelo menos uma referência para verificar.'); return; }
+
+  const refs = raw.split(/\n\s*\n/).map(r => r.trim()).filter(Boolean);
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  for (const ref of refs) {
+    const div = document.createElement('div');
+    div.className = 'ref-line';
+    div.innerHTML = `<span class="ref-type-tag" style="background:#fff3d4;color:#8a5a00;">✅ Verificando...</span><div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Analisando...</div>`;
+    output.appendChild(div);
+
+    try {
+      const prompt = `Você é especialista em ABNT NBR 6023:2025 (terceira edição, 21/05/2025).
+
+Analise a referência abaixo e siga estas instruções:
+
+Referência original:
+${ref}
+
+PASSO 1 — Identifique o tipo de documento (legislação, artigo, livro, TCC/dissertação, página web, etc.)
+
+PASSO 2 — Verifique se os elementos OBRIGATÓRIOS para esse tipo estão presentes:
+- Legislação: jurisdição, tipo+número+data completa, ementa, local, órgão
+- Artigo: autor, título do artigo, título do periódico, volume, número, páginas, ano
+- Livro: autor, título, edição (se houver), local, editora, ano
+- TCC/Dissertação/Tese: autor, título, ano, tipo+grau, unidade, instituição, cidade
+- Página web: autor ou organização, título, data, URL, data de acesso
+
+PASSO 3 — Se TODOS os elementos obrigatórios estiverem presentes (mesmo que mal formatados):
+Responda com o prefixo CORRIGIDA: seguido da referência corrigida conforme ABNT NBR 6023:2025.
+Use **negrito** no título. Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez. Ponto final obrigatório.
+
+PASSO 4 — Se faltar algum elemento obrigatório que você NÃO consegue inferir:
+Responda com o prefixo INCOMPLETA: seguido de uma lista clara e curta dos dados que estão faltando.
+Exemplo: INCOMPLETA: Faltam os seguintes dados: número do periódico, páginas inicial e final.
+
+Responda APENAS com "CORRIGIDA: [referência]" ou "INCOMPLETA: [dados faltantes]". Sem explicações adicionais.`;
+
+      const resultado = await callGroqManual(prompt);
+
+      if (resultado.startsWith('CORRIGIDA:')) {
+        const refCorrigida = resultado.replace(/^CORRIGIDA:\s*/,'').trim();
+        allRefs.push({url: '(verificada)', ref: refCorrigida, type:'manual', ok:true});
+        div.innerHTML = `<span class="ref-type-tag" style="background:#d4ffd8;color:#006b10;">✅ Corrigida</span>
+          <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:6px;">Original: ${ref.substring(0,100)}...</div>
+          <div>${renderRef(refCorrigida)}</div>`;
+        updateResultsHeader();
+      } else {
+        // Incompleta — mostrar o que falta com campo para completar
+        const faltando = resultado.replace(/^INCOMPLETA:\s*/,'').trim();
+        const escapedRef = ref.replace(/`/g,"'").replace(/\\/g,'\\');
+        div.innerHTML = `<span class="ref-type-tag" style="background:#fff0d4;color:#8a5a00;">⚠️ Dados insuficientes</span>
+          <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:6px;">Original: ${ref.substring(0,100)}...</div>
+          <div style="font-family:sans-serif;font-size:13px;color:#8a5a00;margin-bottom:8px;">ℹ️ ${faltando}</div>
+          <textarea id="comp-${Date.now()}" style="width:100%;height:60px;font-size:12px;border:1px solid #e2e6d8;border-radius:6px;padding:6px;font-family:monospace;" placeholder="Complete os dados faltantes aqui..."></textarea>
+          <button class="btn-fill-manual" style="margin-top:6px;" onclick="(function(btn){const idx=btn.dataset.idx;completarECorrigir(btn,_pendingRefs[idx].ref,_pendingRefs[idx].missing)})(this)" data-idx="${(()=>{const i=_pendingIdx++;_pendingRefs[i]={ref:escapedRef,missing:faltando};return i;})()}">🔄 Corrigir com os dados completados</button>`;
+      }
+    } catch(e) {
+      div.innerHTML = `<span class="ref-type-tag" style="background:#fff3d4;color:#8a5a00;">✅ Verificação</span><div class="ref-error">Erro: ${e.message}</div>`;
+    }
+  }
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── ORGANIZAR bibliografia ───────────────────────────────────────────────────
+async function organizarRefs() {
+  const raw = document.getElementById('org-input').value.trim();
+  const order = document.getElementById('org-order').value;
+  if (!raw) { alert('Cole pelo menos uma referência para organizar.'); return; }
+
+  const refs = raw.split(/\n\s*\n/).map(r => r.trim()).filter(Boolean);
+  if (refs.length < 2) { alert('Cole pelo menos duas referências para organizar.'); return; }
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  const div = document.createElement('div');
+  div.className = 'ref-line';
+  div.innerHTML = `<span class="ref-type-tag" style="background:#d4f0d4;color:#006b10;">📋 Organizando ${refs.length} referências...</span>`;
+  output.appendChild(div);
+
+  try {
+    const sistemaLabel = order === 'alfabetica' ? 'alfabética (seção 9.1)' : 'numérica/ordem de citação (seção 9.2)';
+    const prompt = `Você é especialista em ABNT NBR 6023:2025.
+
+Organize as referências bibliográficas abaixo conforme as regras da norma:
+
+SISTEMA: ${sistemaLabel}
+
+REGRAS:
+${order === 'alfabetica' ? `- Ordenar alfabeticamente pelo primeiro elemento (sobrenome do autor ou título se sem autor)
+- Quando o autor for o mesmo, ordenar pelo título
+- Números antes de letras
+- Ignorar artigos (O, A, Os, As, Um, Uma) no início de títulos sem autor` : 
+`- Numerar sequencialmente conforme ordem de citação no texto
+- Manter a ordem fornecida pelo usuário (que representa a ordem de citação)`}
+- Remover referências duplicadas
+- Padronizar formatação conforme ABNT NBR 6023:2025
+- Título em **negrito**
+
+Referências:
+${refs.map((r,i) => `${i+1}. ${r}`).join('\n\n')}
+
+Responda com a lista organizada, cada referência separada por linha em branco.
+${order === 'numerica' ? 'Inclua o número antes de cada referência: "1 AUTOR..."' : ''}
+Sem explicações adicionais.`;
+
+    const resultado = await callGroqManual(prompt);
+
+    // Parsear resultado e adicionar ao allRefs
+    const refsOrganizadas = resultado.split(/\n\s*\n/).map(r => r.trim()).filter(Boolean);
+    refsOrganizadas.forEach(r => allRefs.push({url:'(organizada)', ref:r, type:'manual', ok:true}));
+
+    div.innerHTML = `<span class="ref-type-tag" style="background:#d4f0d4;color:#006b10;">📋 ${refsOrganizadas.length} referências organizadas</span>
+      <div style="margin-top:8px;">${refsOrganizadas.map(r => `<div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border);">${renderRef(r)}</div>`).join('')}</div>`;
+
+    updateResultsHeader();
+  } catch(e) {
+    div.innerHTML = `<span class="ref-type-tag" style="background:#d4f0d4;color:#006b10;">📋 Organizar</span><div class="ref-error">Erro: ${e.message}</div>`;
+  }
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+
+
+// ── Completar referência com campos específicos preenchidos pelo usuário ──────
+async function completarComCampos(btn, refOriginal, ts, numFields) {
+  const dados = [];
+  for (let i = 0; i < numFields; i++) {
+    const el = document.getElementById(`field-${ts}-${i}`);
+    if (el && el.value.trim()) {
+      const label = el.closest('div').previousElementSibling?.previousElementSibling?.textContent || '';
+      dados.push(`${label}: ${el.value.trim()}`);
+    }
+  }
+
+  if (!dados.length) { alert('Preencha pelo menos um campo antes de continuar.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Gerando...';
+
+  const prompt = `Você é especialista em ABNT NBR 6023:2025.
+
+Complete e corrija a referência bibliográfica abaixo com os dados fornecidos pelo usuário.
+
+Referência incompleta:
+${refOriginal}
+
+Dados fornecidos pelo usuário:
+${dados.join('\n')}
+
+Substitua todos os [dado não identificado] pelos valores corretos fornecidos.
+Formate conforme ABNT NBR 6023:2025. Use **negrito** no título.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez. Ponto final obrigatório.
+Responda APENAS com a referência completa e corrigida. Sem explicações.`;
+
+  try {
+    const refCompleta = await callGroqManual(prompt);
+    const container = btn.closest('.ref-line');
+    const autoFixed = autoCorrect(refCompleta, 'web');
+    allRefs.push({url: '(completada)', ref: autoFixed, type:'manual', ok:true});
+    container.innerHTML = `
+      <span class="ref-type-tag" style="background:#d4ffd8;color:#006b10;">✅ Referência completa</span>
+      <div>${renderRef(autoFixed)}</div>`;
+    updateResultsHeader();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🔄 Gerar referência completa';
+    alert('Erro: ' + e.message);
+  }
+}
+
+// ── Completar e corrigir referência incompleta ───────────────────────────────
+async function completarECorrigir(btn, refOriginal, faltando) {
+  const textarea = btn.previousElementSibling;
+  const complemento = textarea.value.trim();
+  if (!complemento) { alert('Preencha os dados faltantes antes de corrigir.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Corrigindo...';
+
+  const prompt = `Você é especialista em ABNT NBR 6023:2025.
+
+Corrija a referência bibliográfica abaixo usando os dados complementares fornecidos.
+
+Referência original (incompleta):
+${refOriginal}
+
+Dados complementares fornecidos pelo usuário:
+${complemento}
+
+Gere a referência completa e correta conforme ABNT NBR 6023:2025.
+Use **negrito** no título. Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez. Ponto final obrigatório.
+Responda APENAS com a referência corrigida. Sem prefixos, sem explicações.`;
+
+  try {
+    const refCorrigida = await callGroqManual(prompt);
+    allRefs.push({url: '(verificada)', ref: refCorrigida, type:'manual', ok:true});
+
+    const container = btn.closest('.ref-line');
+    container.innerHTML = `<span class="ref-type-tag" style="background:#d4ffd8;color:#006b10;">✅ Corrigida</span>
+      <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:6px;">Original: ${refOriginal.substring(0,100)}...</div>
+      <div>${renderRef(refCorrigida)}</div>`;
+    updateResultsHeader();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🔄 Corrigir com os dados completados';
+    alert('Erro: ' + e.message);
+  }
+}
+
+
+// ── PDF / Arquivo com OCR ─────────────────────────────────────────────────────
+let pdfFileData = null;
+let pdfRawBuffer = null;
+
+// Configurar worker do PDF.js
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+function pdfDragOver(e) {
+  e.preventDefault();
+  document.getElementById('pdf-dropzone').style.borderColor = 'var(--olive)';
+  document.getElementById('pdf-dropzone').style.background = '#f3f7e8';
+}
+function pdfDragLeave(e) {
+  document.getElementById('pdf-dropzone').style.borderColor = 'var(--border)';
+  document.getElementById('pdf-dropzone').style.background = 'var(--bg)';
+}
+function pdfDrop(e) {
+  e.preventDefault();
+  pdfDragLeave(e);
+  const file = e.dataTransfer.files[0];
+  if (file) loadPDFFile(file);
+}
+function pdfFileSelected(input) {
+  if (input.files[0]) loadPDFFile(input.files[0]);
+}
+
+function loadPDFFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['pdf','docx','txt'].includes(ext)) {
+    alert('Formato não suportado. Use PDF, DOCX ou TXT.'); return;
+  }
+
+  pdfFileData = null;
+  pdfRawBuffer = null;
+  const info = document.getElementById('pdf-file-info');
+  info.style.display = 'block';
+  info.textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB) — lendo...`;
+
+  const reader = new FileReader();
+
+  if (ext === 'txt') {
+    reader.onload = e => {
+      pdfFileData = { name: file.name, ext, text: e.target.result.substring(0, 8000), needsOCR: false };
+      info.textContent = `✓ ${file.name} — ${pdfFileData.text.length} caracteres lidos`;
+      enablePDFBtn();
+    };
+    reader.readAsText(file);
+
+  } else if (ext === 'docx') {
+    reader.onload = async e => {
+      try {
+        const zip = await JSZip.loadAsync(e.target.result);
+        const xml = await zip.file('word/document.xml').async('text');
+        const text = xml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').substring(0, 8000);
+        pdfFileData = { name: file.name, ext, text, needsOCR: false };
+        info.textContent = `✓ ${file.name} — ${text.length} caracteres extraídos`;
+        enablePDFBtn();
+      } catch(err) {
+        pdfFileData = { name: file.name, ext, text: `[Arquivo: ${file.name}]`, needsOCR: false };
+        info.textContent = `✓ ${file.name} — usando nome do arquivo`;
+        enablePDFBtn();
+      }
+    };
+    reader.readAsArrayBuffer(file);
+
+  } else if (ext === 'pdf') {
+    reader.onload = async e => {
+      pdfRawBuffer = e.target.result;
+      try {
+        // Tentar extração de texto nativa com PDF.js
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(pdfRawBuffer) }).promise;
+        let text = '';
+        const maxPages = Math.min(pdf.numPages, 3); // só primeiras 3 páginas
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdf.getPage(i);
+          const tc = await page.getTextContent();
+          text += tc.items.map(item => item.str).join(' ') + ' ';
+        }
+        text = text.trim().replace(/\s+/g,' ').substring(0, 8000);
+
+        if (text.length > 100) {
+          // PDF com texto nativo — sem precisar de OCR
+          pdfFileData = { name: file.name, ext, text, needsOCR: false, numPages: pdf.numPages };
+          info.textContent = `✓ ${file.name} — ${text.length} caracteres extraídos (${pdf.numPages} páginas)`;
+          enablePDFBtn();
+        } else {
+          // PDF escaneado — vai precisar de OCR
+          pdfFileData = { name: file.name, ext, text: '', needsOCR: true, numPages: pdf.numPages, pdfDoc: pdf };
+          info.innerHTML = `✓ ${file.name} — <strong style="color:#8a5a00;">PDF escaneado detectado</strong> — OCR será executado ao gerar`;
+          enablePDFBtn(true);
+        }
+      } catch(err) {
+        pdfFileData = { name: file.name, ext, text: `[PDF: ${file.name}]`, needsOCR: false };
+        info.textContent = `✓ ${file.name} — erro na leitura, usando nome do arquivo`;
+        enablePDFBtn();
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function enablePDFBtn(isOCR = false) {
+  const btn = document.getElementById('pdf-btn');
+  btn.disabled = false;
+  document.getElementById('pdf-label').textContent = isOCR
+    ? '🔍 Executar OCR e gerar referência'
+    : 'Gerar referência';
+}
+
+async function runOCR(pdfDoc) {
+  const ocrProgress = document.getElementById('ocr-progress');
+  const ocrStatus = document.getElementById('ocr-status');
+  const ocrBar = document.getElementById('ocr-bar');
+  const ocrDetail = document.getElementById('ocr-detail');
+  const canvas = document.getElementById('pdf-canvas');
+  ocrProgress.style.display = 'block';
+
+  let fullText = '';
+  const maxPages = Math.min(pdfDoc.numPages, 3);
+
+  // Inicializar Tesseract worker
+  ocrStatus.textContent = '🔄 Inicializando OCR (pode levar alguns segundos)...';
+  const worker = await Tesseract.createWorker('por+eng', 1, {
+    logger: m => {
+      if (m.status === 'recognizing text') {
+        const pct = Math.round(m.progress * 100);
+        ocrBar.style.width = pct + '%';
+        ocrDetail.textContent = `Reconhecendo texto: ${pct}%`;
+      }
+    }
+  });
+
+  for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+    ocrStatus.textContent = `📄 Processando página ${pageNum} de ${maxPages}...`;
+    ocrBar.style.width = '0%';
+
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 2.0 }); // escala 2x para melhor qualidade
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.display = 'block';
+
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    // OCR na imagem do canvas
+    const { data: { text } } = await worker.recognize(canvas);
+    fullText += text + ' ';
+
+    ocrBar.style.width = '100%';
+  }
+
+  await worker.terminate();
+  canvas.style.display = 'none';
+  ocrProgress.style.display = 'none';
+
+  return fullText.trim().replace(/\s+/g,' ').substring(0, 8000);
+}
+
+async function generateFromPDF() {
+  if (!pdfFileData) { alert('Selecione um arquivo primeiro.'); return; }
+
+  const tipoSel = document.getElementById('pdf-tipo').value;
+  // Detectar tipo pelo conteúdo do arquivo para validação
+  let detectedType = tipoSel === 'auto' ? 'web' : tipoSel;
+  const btn = document.getElementById('pdf-btn');
+  btn.disabled = true;
+  document.getElementById('pdf-label').textContent = 'Gerando...';
+
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  const tipoInstrucao = tipoSel === 'auto' ? 'Identifique o tipo de documento pelo conteúdo e aplique o formato ABNT correto.' : `Trate como: ${tipoSel}.`;
+
+  // Se for PDF escaneado, executar OCR primeiro
+  if (pdfFileData.needsOCR && pdfFileData.pdfDoc) {
+    try {
+      document.getElementById('pdf-label').textContent = 'Executando OCR...';
+      const ocrText = await runOCR(pdfFileData.pdfDoc);
+      pdfFileData.text = ocrText;
+      document.getElementById('pdf-file-info').textContent = `✓ OCR concluído — ${ocrText.length} caracteres extraídos`;
+    } catch(ocrErr) {
+      pdfFileData.text = `[OCR falhou: ${ocrErr.message}. Arquivo: ${pdfFileData.name}]`;
+    }
+  }
+
+  const prompt = `Você é especialista em ABNT NBR 6023:2025.
+
+Analise o conteúdo/metadados do arquivo abaixo e gere a referência bibliográfica correta.
+
+Nome do arquivo: ${pdfFileData.name}
+Conteúdo extraído (primeiros caracteres):
+${pdfFileData.text.substring(0, 4000)}
+
+${tipoInstrucao}
+
+Extraia do conteúdo: autores, título, subtítulo, ano, editora/instituição, local, tipo do trabalho (se acadêmico), periódico (se artigo), volume/número/páginas (se artigo), ementa (se legislação).
+
+Se algum dado essencial não estiver no conteúdo, use [dado não identificado] no lugar.
+
+Formate conforme ABNT NBR 6023:2025:
+- Título em **negrito**
+- Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+- Ponto final obrigatório
+- Data de acesso (se documento online): ${accessDate}
+
+Responda APENAS com a referência formatada. Sem explicações.`;
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+
+  const div = document.createElement('div');
+  div.className = 'ref-line';
+  div.innerHTML = `<span class="ref-type-tag" style="background:#e8f4ff;color:#00508a;">📄 Arquivo</span>
+    <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
+    <div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Gerando referência...</div>`;
+  output.appendChild(div);
+
+  try {
+    const ref = await callGroqManual(prompt);
+
+    // Detectar tipo pelo conteúdo gerado
+    if (tipoSel === 'auto') {
+      if (/BRASIL\.|PARANÁ\.|SÃO PAULO|decreto|lei nº|portaria/i.test(ref)) detectedType = 'legislacao';
+      else if (/ABNT NBR|ISO \d|IEC \d|ASSOCIAÇÃO BRASILEIRA/i.test(ref)) detectedType = 'norma';
+      else if (/dissertação|mestrado|doutorado|tcc|trabalho de conclusão/i.test(ref)) detectedType = 'academico';
+      else if (/v\.\s*\d.*n\.\s*\d/i.test(ref)) detectedType = 'artigo';
+      else if (/editora|ed\./i.test(ref) && !/Disponível em/i.test(ref)) detectedType = 'livro';
+      else if (/contrato|produto\s+\d|plano.diretor|consultoria|elaboração|contratante/i.test(ref)) detectedType = 'relatorio';
+      else detectedType = 'web';
+    }
+
+    // Verificar se há campos não identificados
+    const hasIncomplete = ref.includes('[não identificado]');
+
+    if (hasIncomplete) {
+      // Identificar quais campos estão faltando
+      const missing = [];
+      if (ref.includes('[não identificado]')) {
+        const matches = ref.match(/[\w\s]+\s*\[não identificado\]/g) || [];
+        matches.forEach(m => missing.push(m.replace('[não identificado]','').trim()));
+      }
+
+      const escapedRef = ref.replace(/`/g,"'");
+      const missingList = missing.length ? missing.join(', ') : 'alguns campos obrigatórios';
+
+      div.innerHTML = `<span class="ref-type-tag" style="background:#fff0d4;color:#8a5a00;">⚠️ Incompleta</span>
+        <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
+        <div style="margin-bottom:8px;">${renderRef(ref)}</div>
+        <div style="font-family:sans-serif;font-size:12px;color:#8a5a00;margin-bottom:8px;">ℹ️ Não foi possível identificar: <strong>${missingList}</strong>. Complete abaixo:</div>
+        <textarea id="pdf-comp-${Date.now()}" style="width:100%;height:60px;font-size:12px;border:1px solid #e2e6d8;border-radius:6px;padding:6px;font-family:monospace;" placeholder="Ex: URL: https://... | Ementa: Dispõe sobre..."></textarea>
+        <button class="btn-fill-manual" style="margin-top:6px;" onclick="(function(btn){const idx=btn.dataset.idx;completarECorrigir(btn,_pendingRefs[idx].ref,_pendingRefs[idx].missing)})(this)" data-idx="${(()=>{const i=_pendingIdx++;_pendingRefs[i]={ref:escapedRef,missing:missingList};return i;})()}">🔄 Completar e corrigir</button>`;
+    } else {
+      await processAndValidate(ref, detectedType, pdfFileData.name, div, pdfFileData.name);
+    }
+  } catch(e) {
+    div.innerHTML = `<span class="ref-type-tag" style="background:#e8f4ff;color:#00508a;">📄 Arquivo</span>
+      <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:4px;">${pdfFileData.name}</div>
+      <div class="ref-error">Erro: ${e.message}</div>`;
+  }
+
+  btn.disabled = false;
+  document.getElementById('pdf-label').textContent = 'Gerar referência';
+  resultsCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pane-' + tab).classList.add('active');
+}
+
+// ── Estado global ────────────────────────────────────────────────────────────
+let allRefs = [];
+const _pendingRefs = {};
+let _pendingIdx = 0;
+let modalCallback = null;
+
+function setLoading(on) {
+  document.getElementById('gen-btn').disabled = on;
+  document.getElementById('gen-label').textContent = on ? 'Gerando...' : 'Gerar referências';
+  document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('progress-wrap').style.display = on ? 'block' : 'none';
+  document.getElementById('progress-label').style.display = on ? 'block' : 'none';
+}
+
+function setProgress(done, total) {
+  document.getElementById('progress-bar').style.width = Math.round((done/total)*100)+'%';
+  document.getElementById('progress-label').textContent = `Processando ${done} de ${total}...`;
+}
+
+// ── Geração automática por URL ───────────────────────────────────────────────
+async function generateRefs() {
+  const urls = document.getElementById('url-input').value.split('\n').map(u=>u.trim()).filter(u=>u.startsWith('http'));
+  if (!urls.length) { alert('Cole pelo menos uma URL válida.'); return; }
+
+  setLoading(true);
+  setProgress(0, urls.length);
+  allRefs = [];
+
+  const resultsCard = document.getElementById('results-card');
+  const output = document.getElementById('refs-output');
+  resultsCard.style.display = 'block';
+  output.innerHTML = '';
+
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    setProgress(i+1, urls.length);
+    const type = detectType(url);
+    const {label, css} = TYPE_LABELS[type];
+
+    try {
+      let ref;
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'ref-line';
+      output.appendChild(itemDiv);
+
+      // Links de redirecionamento — avisar e pedir URL original
+      if (type === 'redirect') {
+        const isGoogleNews = url.includes('news.google.com');
+        const msg = isGoogleNews
+          ? 'Esta é uma URL do Google News (redirecionador). Cole a URL da notícia original para gerar a referência correta.'
+          : 'Esta URL é um redirecionador (bit.ly, t.co, etc.). Cole a URL final do conteúdo para gerar a referência correta.';
+        const ts = Date.now();
+        itemDiv.innerHTML = `
+          <div class="ref-url-small">${url}</div>
+          <span class="ref-type-tag tag-lei">⚠️ Link de redirecionamento</span>
+          <div style="font-family:sans-serif;font-size:13px;color:#8a5a00;margin:8px 0 10px;">
+            ℹ️ ${msg}
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Cole a URL original da notícia/conteúdo</label>
+            <input type="url" id="redir-url-${ts}" placeholder="https://g1.globo.com/..." style="width:100%;" />
+          </div>
+          <button class="btn-fill-manual" style="font-size:13px;padding:6px 14px;"
+            onclick="gerarDeRedirect(this, ${ts})">
+            🔄 Gerar referência com a URL correta
+          </button>`;
+        allRefs.push({url, ref:'', type:'redirect', ok:false});
+        continue;
+      }
+
+      // Redes sociais bloqueiam extração automática — abrir formulário manual
+      const SOCIAL_NETWORKS = {
+        instagram: { nome: 'Instagram', campo: 'Instagram' },
+        facebook:  { nome: 'Facebook',  campo: 'Facebook'  },
+        twitter:   { nome: 'Twitter/X', campo: 'Twitter'   },
+        linkedin:  { nome: 'LinkedIn',  campo: 'LinkedIn'  },
+        tiktok:    { nome: 'TikTok',    campo: 'TikTok'    },
+      };
+
+      if (SOCIAL_NETWORKS[type]) {
+        const net = SOCIAL_NETWORKS[type];
+        const ts = Date.now();
+        itemDiv.innerHTML = `
+          <div class="ref-url-small">${url}</div>
+          <span class="ref-type-tag tag-tcc">${net.nome}</span>
+          <div style="font-family:sans-serif;font-size:12px;color:#5a008a;margin:6px 0 10px;">
+            ℹ️ O ${net.nome} bloqueia extração automática. Preencha os dados do post:
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div class="form-group">
+              <label>Autor / Perfil institucional</label>
+              <span class="tip">Nome da pessoa ou organização que publicou</span>
+              <input type="text" id="soc-autor-${ts}" placeholder="Ex: PREFEITURA MUNICIPAL DE IBIPORÃ" />
+            </div>
+            <div class="form-group">
+              <label>Nome do perfil (@)</label>
+              <span class="tip">Ex: prefeituromunicipaldeibipora</span>
+              <input type="text" id="soc-perfil-${ts}" placeholder="Ex: prefeituromunicipaldeibipora" />
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Texto / título do post</label>
+            <span class="tip">Primeiras palavras ou título do conteúdo</span>
+            <input type="text" id="soc-titulo-${ts}" placeholder="Ex: Alô, Ibiporãaa! O clima mais esperado do ano já tá chegando!" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div class="form-group">
+              <label>Data de publicação</label>
+              <span class="tip">Ex: 13 maio 2025</span>
+              <input type="text" id="soc-data-${ts}" placeholder="Ex: 13 maio 2025" />
+            </div>
+            <div class="form-group">
+              <label>Local (cidade/país)</label>
+              <span class="tip">Deixe em branco para [S. l.]</span>
+              <input type="text" id="soc-local-${ts}" placeholder="Ex: Ibiporã" />
+            </div>
+          </div>
+          <button class="btn-fill-manual" style="font-size:13px;padding:6px 14px;"
+            onclick="gerarRefRedeSocial(this, '${url}', '${net.campo}', ${ts})">
+            ✓ Gerar referência
+          </button>`;
+        allRefs.push({url, ref:'', type, ok:false});
+        continue;
+      }
+
+      if (type === 'pdf_remoto') {
+        // PDF remoto — tentar buscar via fetch e extrair metadados, senão abrir formulário
+        itemDiv.innerHTML = `
+          <div class="ref-url-small">${url}</div>
+          <span class="ref-type-tag tag-tcc">PDF remoto</span>
+          <div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Analisando PDF...</div>`;
+
+        try {
           // Tentar buscar o PDF direto primeiro; se falhar (CORS), usar o Worker como proxy
           let buffer;
           try {
