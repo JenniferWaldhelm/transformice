@@ -452,6 +452,7 @@ const TYPE_LABELS = {
   norma:      { label: 'Norma técnica', css: 'tag-artigo' },
   relatorio:  { label: 'Relatório técnico', css: 'tag-web' },
   video:      { label: 'Vídeo (YouTube)', css: 'tag-tcc' },
+  pdf_remoto: { label: 'PDF remoto', css: 'tag-tcc' },
   redirect:   { label: 'Link de redirecionamento', css: 'tag-lei' },
   instagram:  { label: 'Instagram', css: 'tag-tcc' },
   facebook:   { label: 'Facebook', css: 'tag-tcc' },
@@ -537,6 +538,60 @@ updateManualForm();
 
 
 
+
+
+// ── Gerar referência de PDF remoto com dados manuais ─────────────────────────
+async function gerarRefPDFRemoto(btn, url, ts) {
+  const tipo   = document.getElementById(`pdf-rem-tipo-${ts}`)?.value;
+  const autor  = document.getElementById(`pdf-rem-autor-${ts}`)?.value.trim();
+  const titulo = document.getElementById(`pdf-rem-titulo-${ts}`)?.value.trim();
+  const local  = document.getElementById(`pdf-rem-local-${ts}`)?.value.trim();
+  const orgao  = document.getElementById(`pdf-rem-orgao-${ts}`)?.value.trim();
+  const ano    = document.getElementById(`pdf-rem-ano-${ts}`)?.value.trim();
+
+  if (!autor || !titulo) {
+    alert('Preencha pelo menos o Autor/Organização e o Título.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Gerando...';
+
+  const today = new Date();
+  const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+  const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  const prompt = `${PROMPTS[tipo] || PROMPTS.web}
+
+Dados fornecidos pelo usuário:
+Autor/Organização: ${autor}
+Título: ${titulo}
+Local: ${local || '[S. l.]'}
+Órgão/Editora: ${orgao || '[s. n.]'}
+Ano: ${ano || '[s. d.]'}
+URL: ${url}
+Data de acesso: ${accessDate}
+
+Formate a referência completa conforme ABNT NBR 6023:2025. Use **negrito** no título.
+Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez. Ponto final obrigatório.
+Responda APENAS com a referência. Sem explicações.`;
+
+  try {
+    const ref = await callGroqManual(prompt);
+    const container = btn.closest('.ref-line');
+    const corrected = autoCorrect(ref, tipo);
+    allRefs.push({url, ref: corrected, type: tipo, ok: true});
+    container.innerHTML = `
+      <div class="ref-url-small">${url}</div>
+      <span class="ref-type-tag tag-tcc">PDF remoto</span>
+      <div>${renderRef(corrected)}</div>`;
+    updateResultsHeader();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✓ Gerar referência';
+    alert('Erro: ' + e.message);
+  }
+}
 
 // ── Gerar referência a partir de URL original (após redirecionador) ──────────
 async function gerarDeRedirect(btn, ts) {
@@ -1555,6 +1610,116 @@ async function generateRefs() {
             ✓ Gerar referência
           </button>`;
         allRefs.push({url, ref:'', type, ok:false});
+        continue;
+      }
+
+      if (type === 'pdf_remoto') {
+        // PDF remoto — tentar buscar via fetch e extrair metadados, senão abrir formulário
+        itemDiv.innerHTML = `
+          <div class="ref-url-small">${url}</div>
+          <span class="ref-type-tag tag-tcc">PDF remoto</span>
+          <div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Analisando PDF...</div>`;
+
+        try {
+          // Tentar buscar o PDF e extrair via PDF.js
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error('PDF inacessível');
+          const buffer = await resp.arrayBuffer();
+
+          // Configurar PDF.js worker
+          if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          }
+
+          const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+          let text = '';
+          const maxPages = Math.min(pdf.numPages, 3);
+          for (let p = 1; p <= maxPages; p++) {
+            const page = await pdf.getPage(p);
+            const tc = await page.getTextContent();
+            text += tc.items.map(i => i.str).join(' ') + ' ';
+          }
+          text = text.trim().replace(/\s+/g,' ').substring(0, 4000);
+
+          if (text.length < 80) throw new Error('Texto não extraível');
+
+          // Detectar tipo pelo conteúdo
+          let pdfType = 'web';
+          if (/resolução|resolucao|portaria|decreto|lei n[°º]/i.test(text)) pdfType = 'legislacao';
+          else if (/ABNT NBR|ISO \d|norma técnica/i.test(text)) pdfType = 'norma';
+          else if (/dissertação|mestrado|doutorado|tcc/i.test(text)) pdfType = 'academico';
+          else if (/contratante|contratada|produto \d|plano diretor/i.test(text)) pdfType = 'relatorio';
+
+          const today = new Date();
+          const months = ['jan.','fev.','mar.','abr.','maio','jun.','jul.','ago.','set.','out.','nov.','dez.'];
+          const accessDate = `${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+          const prompt = `Você é especialista em ABNT NBR 6023:2025.
+Analise o conteúdo do PDF abaixo e gere a referência bibliográfica correta.
+URL do arquivo: ${url}
+Conteúdo extraído:
+${text}
+Identifique o tipo de documento e gere a referência completa conforme ABNT NBR 6023:2025.
+Use **negrito** no título. Meses: jan. fev. mar. abr. maio jun. jul. ago. set. out. nov. dez.
+Data de acesso: ${accessDate}
+Responda APENAS com a referência formatada. Sem explicações.`;
+
+          itemDiv.innerHTML = `
+            <div class="ref-url-small">${url}</div>
+            <span class="ref-type-tag tag-tcc">PDF remoto</span>
+            <div style="color:var(--muted);font-family:sans-serif;font-size:13px;">Gerando referência...</div>`;
+
+          const ref = await callGroqManual(prompt);
+          await processAndValidate(ref, pdfType, url, itemDiv, url);
+
+        } catch(fetchErr) {
+          // PDF inacessível por CORS ou outro erro — abrir formulário manual
+          const ts = Date.now();
+          itemDiv.innerHTML = `
+            <div class="ref-url-small">${url}</div>
+            <span class="ref-type-tag tag-tcc">PDF remoto</span>
+            <div style="font-family:sans-serif;font-size:12px;color:#5a008a;margin:6px 0 10px;">
+              ℹ️ Não foi possível acessar o PDF automaticamente (bloqueio CORS). Preencha os dados manualmente:
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+              <div class="form-group">
+                <label>Tipo de documento</label>
+                <select id="pdf-rem-tipo-${ts}">
+                  <option value="legislacao">Legislação (lei, decreto, resolução)</option>
+                  <option value="norma">Norma técnica (ABNT, ISO)</option>
+                  <option value="relatorio">Relatório técnico</option>
+                  <option value="academico">TCC / Dissertação / Tese</option>
+                  <option value="web">Documento técnico / Outro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Autor / Organização</label>
+                <input type="text" id="pdf-rem-autor-${ts}" placeholder="Ex: CONSELHO NACIONAL DO MP" />
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label>Título do documento</label>
+              <input type="text" id="pdf-rem-titulo-${ts}" placeholder="Ex: Resolução nº 243, de 26 de outubro de 2021" />
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+              <div class="form-group">
+                <label>Local</label>
+                <input type="text" id="pdf-rem-local-${ts}" placeholder="Ex: Brasília" />
+              </div>
+              <div class="form-group">
+                <label>Órgão / Editora</label>
+                <input type="text" id="pdf-rem-orgao-${ts}" placeholder="Ex: CNMP" />
+              </div>
+              <div class="form-group">
+                <label>Ano</label>
+                <input type="text" id="pdf-rem-ano-${ts}" placeholder="Ex: 2021" />
+              </div>
+            </div>
+            <button class="btn-fill-manual" style="font-size:13px;padding:6px 14px;"
+              onclick="gerarRefPDFRemoto(this, '${url}', ${ts})">
+              ✓ Gerar referência
+            </button>`;
+        }
         continue;
       }
 
