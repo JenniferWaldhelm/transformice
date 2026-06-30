@@ -361,6 +361,7 @@ const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
 // ── Detecção de tipo ─────────────────────────────────────────────────────────
 function detectType(url) {
   const u = url.toLowerCase();
+  if (u.split('?')[0].split('#')[0].endsWith('.pdf')) return 'pdf_remoto';
   if (/youtube\.com|youtu\.be/.test(u)) return 'video';
   if (/news\.google\.com|google\.com\/url|bit\.ly|tinyurl\.com|t\.co\//.test(u)) return 'redirect';
   if (/instagram\.com/.test(u)) return 'instagram';
