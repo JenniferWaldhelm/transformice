@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Aprenda a gerar referências ABNT pelo DOI em segundos. Guia completo com exemplos práticos conforme a NBR 6023:2025 — ferramenta gratuita online.">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="Como Gerar Referência ABNT pelo DOI em Segundos (NBR 6023:2025)">
+  <meta property="og:description" content="Aprenda a gerar referências ABNT pelo DOI em segundos. Guia completo com exemplos práticos conforme a NBR 6023:2025 — ferramenta gratuita online.">
+  <meta property="og:type" content="article">
+  <title>Como Gerar Referência ABNT pelo DOI em Segundos (NBR 6023:2025) | Transformice</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      color: #1a1a2e;
+      line-height: 1.7;
+    }
+
+    /* NAV */
+    nav {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-logo {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #4f46e5;
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 1.5rem; list-style: none; }
+    .nav-links a {
+      text-decoration: none;
+      color: #4b5563;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    .nav-links a:hover { color: #4f46e5; }
+    .nav-cta {
+      background: #4f46e5;
+      color: #fff !important;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem !important;
+    }
+    .nav-cta:hover { background: #4338ca; color: #fff !important; }
+
+    /* ARTICLE */
+    article {
+      max-width: 760px;
+      margin: 3rem auto;
+      padding: 0 1.5rem;
+    }
+
+    .post-meta {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .post-tag {
+      background: #ede9fe;
+      color: #4f46e5;
+      padding: 0.2rem 0.7rem;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+
+    h1 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 800;
+      line-height: 1.25;
+      color: #1a1a2e;
+      margin-bottom: 1rem;
+    }
+    .lead {
+      font-size: 1.1rem;
+      color: #4b5563;
+      margin-bottom: 2.5rem;
+      border-left: 3px solid #4f46e5;
+      padding-left: 1rem;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin: 2.5rem 0 0.8rem;
+    }
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #374151;
+      margin: 1.8rem 0 0.6rem;
+    }
+
+    p { margin-bottom: 1rem; color: #374151; }
+
+    /* STEPS */
+    .steps { counter-reset: step; margin: 1.5rem 0; }
+    .step {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+      align-items: flex-start;
+    }
+    .step-number {
+      counter-increment: step;
+      min-width: 2rem;
+      height: 2rem;
+      background: #4f46e5;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    .step-content strong { display: block; margin-bottom: 0.2rem; color: #1a1a2e; }
+
+    /* CODE BLOCK */
+    .ref-exemplo {
+      background: #f3f4f6;
+      border-left: 4px solid #4f46e5;
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.2rem;
+      font-size: 0.92rem;
+      color: #1f2937;
+      margin: 1rem 0 1.5rem;
+      line-height: 1.6;
+    }
+    .ref-exemplo strong { font-style: normal; }
+
+    /* CALLOUT */
+    .callout {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      margin: 1.5rem 0;
+      font-size: 0.95rem;
+      color: #92400e;
+    }
+    .callout strong { color: #78350f; }
+
+    .callout-info {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      color: #1e3a5f;
+    }
+    .callout-info strong { color: #1e40af; }
+
+    /* TABLE */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.93rem;
+    }
+    th {
+      background: #4f46e5;
+      color: #fff;
+      padding: 0.7rem 1rem;
+      text-align: left;
+      font-weight: 600;
+    }
+    td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      color: #374151;
+    }
+    tr:nth-child(even) td { background: #f9fafb; }
+
+    /* CTA BOX */
+    .cta-box {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      margin: 3rem 0 2rem;
+      color: #fff;
+    }
+    .cta-box h2 { color: #fff; margin: 0 0 0.5rem; font-size: 1.4rem; }
+    .cta-box p { color: #e0e7ff; margin-bottom: 1.2rem; }
+    .cta-btn {
+      display: inline-block;
+      background: #fff;
+      color: #4f46e5;
+      font-weight: 700;
+      padding: 0.75rem 2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: transform 0.15s;
+    }
+    .cta-btn:hover { transform: translateY(-1px); }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      font-size: 0.85rem;
+      color: #9ca3af;
+      border-top: 1px solid #e5e7eb;
+    }
+    footer a { color: #6b7280; text-decoration: none; }
+    footer a:hover { color: #4f46e5; }
+
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="https://transformice.net.br/">Transformice</a>
+  <ul class="nav-links">
+    <li><a href="https://transformice.net.br/">Gerador</a></li>
+    <li><a href="https://transformice.net.br/faq.html">FAQ</a></li>
+    <li><a href="https://transformice.net.br/blog/">Blog</a></li>
+    <li><a class="nav-cta" href="https://transformice.net.br/">Gerar referência</a></li>
+  </ul>
+</nav>
+
+<article>
+
+  <div class="post-meta">
+    <span class="post-tag">Guia prático</span>
+    <span>Julho de 2025 · 6 min de leitura</span>
+  </div>
+
+  <h1>Como gerar referência ABNT pelo DOI em segundos (NBR 6023:2025)</h1>
+
+  <p class="lead">O DOI é o caminho mais rápido e seguro para criar referências de artigos científicos na norma ABNT. Entenda o que é, onde encontrar e como usar uma ferramenta gratuita para gerar a referência formatada automaticamente.</p>
+
+  <h2>O que é o DOI e por que ele facilita a referência ABNT?</h2>
+
+  <p>O DOI (<em>Digital Object Identifier</em>) é um código único que identifica permanentemente um artigo científico na internet — algo como o CPF do documento acadêmico. Ele tem sempre o mesmo formato: começa com <strong>10.</strong> seguido de números e letras, como <code>10.1590/S1413-81232011000700031</code>.</p>
+
+  <p>Ao contrário de URLs comuns que podem mudar ou sair do ar, o DOI é permanente. Por isso a NBR 6023:2025 recomenda seu uso sempre que disponível. E do ponto de vista prático, ele carrega consigo todos os metadados do artigo — título, autores, revista, volume, páginas, data — o que permite gerar a referência completa sem digitar nada manualmente.</p>
+
+  <div class="callout callout-info">
+    <strong>💡 Dica:</strong> Se você tem o DOI, não precisa procurar manualmente autor, volume ou número de página. Uma ferramenta como o Transformice busca tudo isso automaticamente via API Crossref.
+  </div>
+
+  <h2>Onde encontrar o DOI de um artigo</h2>
+
+  <p>O DOI aparece em diferentes lugares dependendo da plataforma onde você acessou o artigo:</p>
+
+  <table>
+    <thead>
+      <tr><th>Plataforma</th><th>Onde encontrar o DOI</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Scielo</td><td>No início do artigo, abaixo do título, como link "https://doi.org/..."</td></tr>
+      <tr><td>PubMed</td><td>Na coluna direita do artigo, campo "DOI"</td></tr>
+      <tr><td>Google Scholar</td><td>Clicando nos três traços ao lado do resultado → "Citar" → o DOI aparece no texto ABNT</td></tr>
+      <tr><td>Periódico da CAPES</td><td>Na página do artigo, abaixo do resumo</td></tr>
+      <tr><td>PDF do artigo</td><td>Geralmente na primeira página, rodapé ou cabeçalho</td></tr>
+    </tbody>
+  </table>
+
+  <p>Você pode usar tanto o código completo (<code>10.1590/xxx</code>) quanto a URL completa (<code>https://doi.org/10.1590/xxx</code>) — o Transformice reconhece os dois formatos.</p>
+
+  <h2>Como gerar referência ABNT pelo DOI no Transformice</h2>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <strong>Encontre o DOI do artigo</strong>
+        Localize o código DOI na página do artigo ou no PDF. Copie o código completo ou a URL com doi.org.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <strong>Acesse a aba DOI no Transformice</strong>
+        Entre em <a href="https://transformice.net.br/">transformice.net.br</a> e clique na aba <strong>🔬 DOI</strong>.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <strong>Cole o DOI e clique em Gerar</strong>
+        O sistema consulta a API Crossref, recupera todos os metadados e monta a referência formatada conforme a NBR 6023:2025.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <strong>Copie ou exporte para Word</strong>
+        Clique em "Copiar" para usar no seu documento ou em "Baixar Word (.docx)" para exportar já com formatação ABNT (Times New Roman 12pt, recuo de segunda linha).
+      </div>
+    </div>
+  </div>
+
+  <h2>Como fica a referência ABNT com DOI — exemplos práticos</h2>
+
+  <h3>Artigo com um autor</h3>
+  <div class="ref-exemplo">
+    SILVA, João Alberto. Gestão de recursos hídricos urbanos no contexto das mudanças climáticas. <strong>Revista Brasileira de Engenharia Ambiental</strong>, Campina Grande, v. 25, n. 3, p. 45-60, mar. 2024. DOI: 10.1590/S1413-81232024000300045. Disponível em: https://doi.org/10.1590/S1413-81232024000300045. Acesso em: 10 jul. 2025.
+  </div>
+
+  <h3>Artigo com até três autores</h3>
+  <div class="ref-exemplo">
+    SOUZA, Maria Beatriz; PEREIRA, Carlos Eduardo; LIMA, Ana Paula. Biodiversidade em áreas de preservação permanente urbanas. <strong>Ciência e Ambiente</strong>, Santa Maria, v. 12, n. 1, p. 10-25, jan. 2023. DOI: 10.5902/xxx. Disponível em: https://doi.org/10.5902/xxx. Acesso em: 10 jul. 2025.
+  </div>
+
+  <h3>Artigo com quatro ou mais autores</h3>
+  <div class="ref-exemplo">
+    SANTOS, Ana Carolina <em>et al.</em> Impacto da urbanização na qualidade da água de bacias hidrográficas. <strong>Engenharia Sanitária e Ambiental</strong>, Rio de Janeiro, v. 28, n. 2, p. 33-47, abr. 2023. DOI: 10.1590/xxx. Disponível em: https://doi.org/10.1590/xxx. Acesso em: 10 jul. 2025.
+  </div>
+
+  <div class="callout">
+    <strong>⚠️ Atenção:</strong> Quando há 4 ou mais autores, a NBR 6023:2025 permite usar apenas o primeiro seguido de <em>et al.</em> em itálico. Essa opção deve ser mantida em todas as referências do trabalho — não misture com a listagem completa de autores.
+  </div>
+
+  <h2>O que fazer quando o DOI não traz todos os dados?</h2>
+
+  <p>Alguns artigos mais antigos ou de periódicos menores podem ter metadados incompletos na base Crossref. Nesses casos, o Transformice indica automaticamente quais campos estão faltando e abre um formulário para você completar manualmente — sem precisar refazer tudo do zero.</p>
+
+  <p>Se o artigo não tiver DOI, use a aba <strong>🔗 URL</strong> do Transformice com o link direto da página do artigo. O sistema detecta automaticamente que se trata de um artigo científico e aplica o formato correto.</p>
+
+  <h2>DOI vs. URL: qual usar na referência ABNT?</h2>
+
+  <table>
+    <thead>
+      <tr><th></th><th>DOI</th><th>URL comum</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Permanência</strong></td><td>✅ Permanente</td><td>⚠️ Pode mudar ou sair do ar</td></tr>
+      <tr><td><strong>Dados automáticos</strong></td><td>✅ Puxa todos os metadados</td><td>⚠️ Depende do site</td></tr>
+      <tr><td><strong>Recomendação ABNT</strong></td><td>✅ Preferencial (seção 7.7.6)</td><td>✅ Aceito quando não há DOI</td></tr>
+      <tr><td><strong>Disponibilidade</strong></td><td>Artigos científicos</td><td>Qualquer página web</td></tr>
+    </tbody>
+  </table>
+
+  <p>A recomendação da NBR 6023:2025 é clara: sempre que o artigo tiver DOI, use o DOI. Inclua-o antes do campo "Disponível em:", conforme a seção 7.7.6 da norma.</p>
+
+  <h2>Perguntas frequentes sobre referência ABNT com DOI</h2>
+
+  <h3>Preciso incluir "https://doi.org/" antes do código?</h3>
+  <p>Sim. A forma correta é incluir o DOI como URL completa no campo "Disponível em:" — por exemplo, <code>https://doi.org/10.1590/xxx</code>. Antes do "Disponível em:", você também pode indicar apenas o código no campo DOI: <code>DOI: 10.1590/xxx.</code></p>
+
+  <h3>O DOI substitui o "Disponível em: Acesso em:"?</h3>
+  <p>Não. A NBR 6023:2025 exige que ambos sejam incluídos. O DOI aparece antes do "Disponível em:", e o link completo <code>https://doi.org/...</code> é usado no campo "Disponível em:".</p>
+
+  <h3>E se o artigo estiver em inglês?</h3>
+  <p>A referência ABNT segue as regras brasileiras independente do idioma do artigo. Os campos como "Disponível em:" e "Acesso em:" permanecem em português, mesmo que o título e o periódico sejam em inglês.</p>
+
+  <h3>Como citar artigo de preprint (sem DOI definitivo)?</h3>
+  <p>Preprints disponíveis em plataformas como SciELO Preprints ou bioRxiv geralmente têm DOI próprio. Cole esse DOI no Transformice e o sistema identifica automaticamente que é um preprint e aplica o formato adequado.</p>
+
+  <div class="cta-box">
+    <h2>Gere sua referência ABNT pelo DOI agora</h2>
+    <p>Gratuito, sem cadastro, atualizado para a NBR 6023:2025. Cole o DOI e receba a referência formatada em segundos.</p>
+    <a class="cta-btn" href="https://transformice.net.br/">Acessar o Transformice</a>
+  </div>
+
+</article>
+
+<footer>
+  © 2025 Transformice ·
+  <a href="https://transformice.net.br/">Gerador ABNT</a> ·
+  <a href="https://transformice.net.br/faq.html">FAQ</a> ·
+  <a href="https://transformice.net.br/blog/">Blog</a> ·
+  <a href="mailto:contato@transformice.net.br">contato@transformice.net.br</a>
+</footer>
+
+</body>
+</html>
