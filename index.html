@@ -358,6 +358,8 @@ BRASIL. Lei nº 9.433, de 8 de janeiro de 1997..."></textarea>
             <option value="artigo">Artigo científico</option>
             <option value="academico">TCC / Dissertação / Tese</option>
             <option value="livro">Livro</option>
+            <option value="relatorio">Relatório técnico</option>
+            <option value="norma">Norma técnica (ABNT, ISO)</option>
           </select>
         </div>
       </div>
@@ -384,6 +386,7 @@ BRASIL. Lei nº 9.433, de 8 de janeiro de 1997..."></textarea>
       <div class="btn-row">
         <button class="btn-action btn-copy" onclick="copyAll(this)">⎘ Copiar tudo</button>
         <button class="btn-action btn-word" id="btn-word" onclick="exportWord()">⬇ Baixar Word (.docx)</button>
+        <button class="btn-action" style="background:#f5f5f5;color:var(--muted);border:1px solid var(--border);" onclick="clearResults()" title="Limpar histórico">🗑 Limpar</button>
       </div>
     </div>
     <div class="refs-output" id="refs-output"></div>
@@ -577,6 +580,23 @@ const MANUAL_FIELDS = {
     { id:'editora', label:'Editora', tip:'' },
     { id:'ano', label:'Ano', tip:'' },
     { id:'isbn', label:'ISBN (opcional)', tip:'' },
+  ],
+  relatorio: [
+    { id:'contratante', label:'Contratante (órgão público)', tip:'Ex: RIO BRANCO DO SUL (PR). Prefeitura Municipal' },
+    { id:'elaboradora', label:'Empresa elaboradora (opcional)', tip:'Ex: DRZ GEOTECNOLOGIA E CONSULTORIA LTDA' },
+    { id:'titulo', label:'Título do relatório / plano', tip:'Ex: Plano Diretor de Drenagem e Manejo de Águas Pluviais' },
+    { id:'subtitulo', label:'Subtítulo / produto (opcional)', tip:'Ex: Produto 4: concepção dos programas e projetos' },
+    { id:'local', label:'Local', tip:'Ex: Londrina' },
+    { id:'orgao', label:'Órgão / Elaboradora (publicador)', tip:'Ex: DRZ Geotecnologia e Consultoria' },
+    { id:'ano', label:'Ano', tip:'' },
+  ],
+  norma: [
+    { id:'organizacao', label:'Organização normalizadora', tip:'Ex: ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS' },
+    { id:'sigla_numero', label:'Sigla + número', tip:'Ex: ABNT NBR 6023' },
+    { id:'titulo', label:'Título (em minúsculas)', tip:'Ex: informação e documentação — referências — elaboração' },
+    { id:'local', label:'Local', tip:'Ex: Rio de Janeiro' },
+    { id:'editora', label:'Editora (sigla)', tip:'Ex: ABNT' },
+    { id:'ano', label:'Ano', tip:'' },
   ]
 };
 
