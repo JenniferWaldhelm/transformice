@@ -1988,7 +1988,7 @@ function validateRef(ref, type) {
 
   switch(type) {
     case 'legislacao':
-      if (!/^[A-ZÁÉÍÓÚÃÕÂÊÔÇ\s]+[.(]/.test(r)) issues.push('Jurisdição em maiúsculas ausente');
+      if (!/^[A-ZÁÉÍÓÚÃÕÂÊÔÇ\s]+(\.|\(|,)/.test(r) && !/BRASIL|PARANÁ|SÃO PAULO|MINAS|SANTA|RIO|GOIÁS|BAHIA|CEARÁ|PARÁ|MARANHÃO|PIAUÍ|PERNAMBUCO|PARAÍBA|ALAGOAS|SERGIPE|ESPÍRITO|MATO|TOCANTINS|RONDÔNIA|RORAIMA|AMAPÁ|AMAZONAS|ACRE/i.test(r)) issues.push('Jurisdição em maiúsculas ausente');
       if (!/nº\s*\d/.test(r)) issues.push('Número do ato ausente ou mal formatado');
       if (!/de\s+\d{1,2}\s+de\s+\w+\s+de\s+\d{4}/.test(r)) issues.push('Data completa ausente (dia, mês por extenso, ano)');
       if (r.split('.').length < 4) issues.push('Ementa provavelmente ausente');
