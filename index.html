@@ -75,14 +75,23 @@
     .card { padding: 1rem; }
 
     /* Abas com scroll horizontal */
+    .card { overflow: hidden; }
     .tabs {
-      overflow-x: auto;
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: flex;
+      overflow-x: scroll;
       overflow-y: hidden;
       -webkit-overflow-scrolling: touch;
-      flex-wrap: nowrap;
+      flex-wrap: nowrap !important;
       gap: 2px;
-      padding-bottom: 2px;
+      padding-bottom: 0;
       scrollbar-width: none;
+      -ms-overflow-style: none;
+      margin-left: -1rem;
+      margin-right: -1rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
     }
     .tabs::-webkit-scrollbar { display: none; }
     .tab {
@@ -90,6 +99,7 @@
       font-size: 11px;
       white-space: nowrap;
       flex-shrink: 0;
+      -webkit-flex-shrink: 0;
     }
 
     /* Formulários em coluna única */
