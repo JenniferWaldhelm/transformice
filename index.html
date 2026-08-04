@@ -1897,8 +1897,9 @@ async function callGroq(url, type) {
   });
   if (!resp.ok) { const e = await resp.json().catch(()=>{}); throw new Error(e?.error?.message||`Erro HTTP ${resp.status}`); }
   const data = await resp.json();
-  const text = data.choices?.[0]?.message?.content?.trim();
+  let text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Sem resposta da API.');
+  text = text.replace(/^(User Safety:[^\n]+\n?|Content:[^\n]+\n?|Safety:[^\n]+\n?)/gi, '').trim();
   return text;
 }
 
@@ -1913,8 +1914,9 @@ async function callGroqManual(prompt) {
   });
   if (!resp.ok) { const e = await resp.json().catch(()=>{}); throw new Error(e?.error?.message||`Erro HTTP ${resp.status}`); }
   const data = await resp.json();
-  const text = data.choices?.[0]?.message?.content?.trim();
+  let text = data.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Sem resposta da API.');
+  text = text.replace(/^(User Safety:[^\n]+\n?|Content:[^\n]+\n?|Safety:[^\n]+\n?)/gi, '').trim();
   return text;
 }
 
