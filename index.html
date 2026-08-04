@@ -65,7 +65,65 @@
   .form-group { display: flex; flex-direction: column; gap: 4px; }
   .form-group label { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
   .form-group .tip { font-size: 11px; color: #aaa; }
-  @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
+  /* ── Mobile responsivo ─────────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    body { padding: 1rem 0.75rem 3rem; }
+
+    .brand { font-size: 1.6rem; }
+    .subtitle { font-size: 0.9rem; }
+
+    .card { padding: 1rem; }
+
+    /* Abas com scroll horizontal */
+    .tabs {
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      flex-wrap: nowrap;
+      gap: 2px;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      padding: 7px 10px;
+      font-size: 11px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Formulários em coluna única */
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+
+    /* Botões de ação */
+    .btn-row { flex-direction: column; }
+    .btn-action { width: 100%; justify-content: center; }
+    .btn-generate { font-size: 14px; padding: 12px; }
+
+    /* Resultados */
+    .results-header { flex-direction: column; align-items: flex-start; }
+    .results-card { padding: 1rem; }
+    .refs-output { font-size: 13px; }
+
+    /* Modal */
+    .modal { padding: 1.25rem; margin: 0.5rem; }
+
+    /* Campos de formulário inline (grid com style) */
+    div[style*="grid-template-columns:1fr 1fr"],
+    div[style*="grid-template-columns: 1fr 1fr"],
+    div[style*="grid-template-columns:1fr 1fr 1fr"],
+    div[style*="grid-template-columns: 1fr 1fr 1fr"] {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Texto menor em tags de tipo */
+    .ref-type-tag { font-size: 9px; }
+    .ref-url-small { font-size: 9.5px; word-break: break-all; }
+
+    /* Textarea menor no mobile */
+    textarea { height: 120px; font-size: 12px; }
+  }
 
   /* Results */
   .results-card { background: var(--white); border: 1px solid #c8dda8; border-radius: var(--radius); padding: 1.5rem; display: none; }
