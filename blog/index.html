@@ -42,4 +42,71 @@
     overflow: hidden;
     transition: box-shadow 0.2s, border-color 0.2s;
     text-decoration: none;
-    display:
+    display: block;
+    margin-bottom: 1rem;
+  }
+  .post-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-color: #c8dda8; }
+  .post-card-body { padding: 1.5rem; }
+  .post-card-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem; }
+  .post-card-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dark-olive); background: #eaf0db; padding: 2px 8px; border-radius: 4px; }
+  .post-card-date { font-size: 12px; color: var(--muted); }
+  .post-card h2 { font-size: 1.15rem; font-weight: 700; color: var(--dark); margin-bottom: 0.5rem; line-height: 1.3; }
+  .post-card p { font-size: 13.5px; color: var(--muted); line-height: 1.6; margin-bottom: 0.75rem; }
+  .post-card-link { font-size: 13px; font-weight: 600; color: var(--olive); }
+
+  footer { text-align: center; padding: 2rem; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+  footer a { color: var(--olive); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="/">Transformice</a>
+  <ul class="nav-links">
+    <li><a href="/">Gerador</a></li>
+    <li><a href="/faq.html">FAQ</a></li>
+    <li><a href="/blog/" class="active">Blog</a></li>
+    <li><a href="/" class="nav-cta">Gerar referência</a></li>
+  </ul>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">Blog</div>
+  <h1>Guias sobre ABNT e referências bibliográficas</h1>
+  <p>Tutoriais práticos para formatar seu TCC, artigo e dissertação.</p>
+</div>
+
+<div class="content">
+
+  <a class="post-card" href="/blog/como-gerar-referencias-abnt-nbr-6023.html">
+    <div class="post-card-body">
+      <div class="post-card-meta">
+        <span class="post-card-tag">Guia prático</span>
+        <span class="post-card-date">Junho de 2025 · 8 min</span>
+      </div>
+      <h2>Como gerar referências ABNT em segundos (NBR 6023:2025 atualizada)</h2>
+      <p>Saiba como formatar sites, leis, vídeos, artigos científicos e redes sociais conforme a norma mais recente — com exemplos práticos de cada tipo de documento.</p>
+      <span class="post-card-link">Ler artigo →</span>
+    </div>
+  </a>
+
+  <a class="post-card" href="/blog/como-gerar-referencia-abnt-pelo-doi.html">
+    <div class="post-card-body">
+      <div class="post-card-meta">
+        <span class="post-card-tag">Guia prático</span>
+        <span class="post-card-date">Julho de 2025 · 6 min</span>
+      </div>
+      <h2>Como gerar referência ABNT pelo DOI em segundos (NBR 6023:2025)</h2>
+      <p>Entenda o que é o DOI, onde encontrá-lo e como gerar automaticamente a referência completa de artigos científicos — sem digitar nada manualmente.</p>
+      <span class="post-card-link">Ler artigo →</span>
+    </div>
+  </a>
+
+</div>
+
+<footer>
+  <p>© 2025 Transformice · <a href="/">Gerador ABNT</a> · <a href="/faq.html">FAQ</a> · <a href="/blog/">Blog</a> · <a href="mailto:contato@transformice.net.br">contato@transformice.net.br</a></p>
+</footer>
+
+</body>
+</html>
